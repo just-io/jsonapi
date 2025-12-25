@@ -1001,7 +1001,174 @@ describe('ResourceManager', () => {
             ]);
         }
 
+        let firstAddCheck = true;
+
+        function handleAdd(
+            ctx: Context,
+            query: Query<DefaultPage, ResourceDeclaration, ResourceDeclaration[], 'list'>,
+            newResource: NewResource<ResourceDeclaration>,
+            resource: CommonResource,
+            included: CommonResource[],
+        ): void {
+            assert.deepStrictEqual(ctx, {
+                role: 'user',
+                userId: '11',
+            });
+            if (firstAddCheck) {
+                assert.deepStrictEqual(query, {
+                    ref: {
+                        type: 'notes',
+                    },
+                });
+                assert.deepStrictEqual(newResource, {
+                    type: 'notes',
+                    attributes: {
+                        title: 'New Note',
+                    },
+                    relationships: {
+                        tags: [],
+                    },
+                });
+                const id = resource.id;
+                assert.deepStrictEqual(resource, {
+                    type: 'notes',
+                    id,
+                    attributes: {
+                        created_at: 0,
+                        links: [],
+                        text: '',
+                        title: 'New Note',
+                    },
+                    relationships: {
+                        author: {
+                            id: '11',
+                            type: 'users',
+                        },
+                        tags: {
+                            items: [],
+                            limit: 4,
+                            offset: 0,
+                            total: 0,
+                        },
+                    },
+                });
+                firstAddCheck = false;
+            } else {
+                assert.deepStrictEqual(query, {
+                    ref: {
+                        type: 'tags',
+                    },
+                });
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                const noteId = newResource.relationships.note.id;
+                assert.deepStrictEqual(newResource, {
+                    type: 'tags',
+                    attributes: {
+                        name: 'new one',
+                    },
+                    relationships: {
+                        note: {
+                            type: 'notes',
+                            id: noteId,
+                        },
+                    },
+                });
+                const id = resource.id;
+                assert.deepStrictEqual(resource, {
+                    attributes: {
+                        name: 'new one',
+                    },
+                    id,
+                    relationships: {
+                        note: {
+                            id: noteId,
+                            type: 'notes',
+                        },
+                    },
+                    type: 'tags',
+                });
+            }
+            assert.deepStrictEqual(included, []);
+        }
+
+        let firstChangeCheck = true;
+
+        function handleChange(
+            ctx: Context,
+            query:
+                | Query<DefaultPage, ResourceDeclaration, ResourceDeclaration[], 'id'>
+                | Query<DefaultPage, ResourceDeclaration, ResourceDeclaration[], 'list'>,
+            oldResource: CommonResource | null,
+            newResource: CommonResource | null,
+        ): void {
+            assert.deepStrictEqual(ctx, {
+                role: 'user',
+                userId: '11',
+            });
+            if (firstChangeCheck) {
+                assert.deepStrictEqual(query, {
+                    ref: {
+                        type: 'notes',
+                    },
+                });
+                assert.deepStrictEqual(oldResource, null);
+                assert(newResource !== null);
+                const id = newResource.id;
+                assert.deepStrictEqual(newResource, {
+                    type: 'notes',
+                    id,
+                    attributes: {
+                        created_at: 0,
+                        links: [],
+                        text: '',
+                        title: 'New Note',
+                    },
+                    relationships: {
+                        author: {
+                            id: '11',
+                            type: 'users',
+                        },
+                        tags: {
+                            items: [],
+                            limit: 4,
+                            offset: 0,
+                            total: 0,
+                        },
+                    },
+                });
+                firstChangeCheck = false;
+            } else {
+                assert.deepStrictEqual(query, {
+                    ref: {
+                        type: 'tags',
+                    },
+                });
+                assert.deepStrictEqual(oldResource, null);
+                assert(newResource !== null);
+                const id = newResource.id;
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                const noteId = newResource.relationships.note.id;
+                assert.deepStrictEqual(newResource, {
+                    attributes: {
+                        name: 'new one',
+                    },
+                    id,
+                    relationships: {
+                        note: {
+                            id: noteId,
+                            type: 'notes',
+                        },
+                    },
+                    type: 'tags',
+                });
+            }
+        }
+
         resourceManager.on('operations', handleOperations);
+        resourceManager.on('add', handleAdd);
+        resourceManager.on('change', handleChange);
 
         await resourceManager.operations(context, [
             operation.add<NoteDeclaration>({

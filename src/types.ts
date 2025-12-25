@@ -10,17 +10,6 @@ import {
     SingleRelationshipTypes,
 } from './resource-declaration';
 
-export type UntypedKeys<Obj, T> = {
-    [K in keyof Obj]: Obj[K] extends T ? never : K;
-}[keyof Obj];
-
-export type DataList<V> = {
-    items: V[];
-    offset?: number;
-    total?: number;
-    limit?: number;
-};
-
 export type MetaType = Record<string, unknown>;
 
 export type ResourceIdentifier<T> = {
@@ -213,6 +202,17 @@ export type OperationResult<
 export type OperationResults<OA extends Operation<any, any>[]> = {
     -readonly [P in keyof OA]: OperationResult<OA[P]>;
 };
+
+export type DataList<V> = {
+    items: V[];
+    offset?: number;
+    total?: number;
+    limit?: number;
+};
+
+export type UntypedKeys<Obj, T> = {
+    [K in keyof Obj]: Obj[K] extends T ? never : K;
+}[keyof Obj];
 
 export type PartialRequired<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
 
