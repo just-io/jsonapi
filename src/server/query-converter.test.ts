@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import { QueryConverter } from './query-converter';
-import { PageProvider } from './types';
+import { PageProvider } from '../types/common';
 import schemas from './schemas';
-import { ErrorFactory, CommonError } from './errors';
+import { ErrorFactory } from './errors';
 import { ErrorSet } from '@just-io/schema';
+import { CommonError } from '../types/formats';
 
 type Page = {
     number?: number;

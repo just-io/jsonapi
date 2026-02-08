@@ -1,4 +1,4 @@
-import { MultipleKeys, ResourceDeclaration } from './resource-declaration';
+import { MultipleKeys, ResourceDeclaration } from '../types/resource-declaration';
 import {
     AddRelationshipsOperation,
     AddResourceOperation,
@@ -6,7 +6,7 @@ import {
     RemoveResourceOperation,
     UpdateRelationshipsOperation,
     UpdateResourceOperation,
-} from './types';
+} from '../types/common';
 
 export const operation = {
     add<D extends ResourceDeclaration>(data: AddResourceOperation<D>['data']): AddResourceOperation<D> {

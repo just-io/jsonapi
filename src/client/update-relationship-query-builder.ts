@@ -1,6 +1,6 @@
-import { FetchResponseRelationshipData, FetchResponseRelationshipsData } from '../formatter';
-import { NewRelationshipValue, PartialResourceDeclaration, ResourceDeclaration } from '../resource-declaration';
-import { Query } from '../types';
+import { FetchResponseRelationshipData, FetchResponseRelationshipsData } from '../types/formats';
+import { NewRelationshipValue, PartialResourceDeclaration, ResourceDeclaration } from '../types/resource-declaration';
+import { Query } from '../types/common';
 import { Options } from './types';
 
 export default class UpdateRelationshipQueryBuilder<

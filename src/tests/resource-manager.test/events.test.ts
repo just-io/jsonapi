@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import { Context, makeResourceManager, NoteDeclaration, TagDeclaration } from '../prepare';
-import { DataList, Operation, OperationResults, Query, ResourceIdentifier } from '../../types';
-import { DefaultPage } from '../../defaults';
-import { ResourceDeclaration, CommonResource, NewResource, EditableResource } from '../../resource-declaration';
-import { ErrorContext } from '../../resource-manager';
+import { DataList, Operation, OperationResults, Query, ResourceIdentifier } from '../../types/common';
+import { DefaultPage } from '../../server/defaults';
+import { ResourceDeclaration, CommonResource, NewResource, EditableResource } from '../../types/resource-declaration';
+import { ErrorContext } from '../../server/resource-manager';
 import { ErrorSet } from '@just-io/schema';
-import { CommonError } from '../../errors';
-import { operation } from '../../operation';
+import { operation } from '../../server/operation';
+import { CommonError } from '../../types/formats';
 
 describe('ResourceManager', () => {
     describe('events', () => {

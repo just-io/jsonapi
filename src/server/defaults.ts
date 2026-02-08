@@ -1,7 +1,8 @@
-import { ErrorFactory, CommonError } from './errors';
-import { DataList, MetaProvider, PageProvider, ResourceIdentifier, CommonQueryRef } from './types';
+import { ErrorFactory } from './errors';
+import { DataList, MetaProvider, PageProvider, ResourceIdentifier, CommonQueryRef } from '../types/common';
 import schemas from './schemas';
 import { ErrorSet } from '@just-io/schema';
+import { CommonError } from '../types/formats';
 
 export type DefaultPage = {
     number?: number;

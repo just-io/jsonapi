@@ -1,7 +1,7 @@
 import { defaultErrorFormatter, ErrorKeeper, ErrorSet, Pointer } from '@just-io/schema';
 
-import { ErrorFactory, CommonError } from './errors';
-import { CommonEditableResource, CommonNewResource, ResourceDeclaration } from './resource-declaration';
+import { ErrorFactory } from './errors';
+import { CommonEditableResource, CommonNewResource, ResourceDeclaration } from '../types/resource-declaration';
 import { ResourceKeeper } from './resource-keeper';
 import { CommonAttributeFieldSchema, CommonRelationshipFieldSchema } from './resource-schema';
 import {
@@ -12,7 +12,8 @@ import {
     Query,
     QueryRef,
     OperationRelationshipValue,
-} from './types';
+} from '../types/common';
+import { CommonError } from '../types/formats';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CommonResourceKeeper<C, P> = ResourceKeeper<any, C, P>;

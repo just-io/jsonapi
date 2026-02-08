@@ -1,4 +1,4 @@
-import { CommonResource } from './resource-declaration';
+import { CommonResource } from '../types/resource-declaration';
 
 export function filterResourceFields(resource: CommonResource, fields?: string[]): CommonResource {
     if (!fields) {

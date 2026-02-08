@@ -1,4 +1,4 @@
-import { DataList, FilterRecord, FilterValues, OperationResourceIdentifier, ResourceIdentifier } from './types';
+import { DataList, FilterRecord, FilterValues, OperationResourceIdentifier, ResourceIdentifier } from './common';
 
 type ModeKeys<V, T extends Record<string, { mode: V } | unknown>> = {
     [K in keyof T]: T[K] extends { mode: V } ? K : never;

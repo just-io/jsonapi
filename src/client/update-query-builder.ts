@@ -1,6 +1,6 @@
-import { FetchExistResponseResourceData } from '../formatter';
-import { EditableResource, PartialResourceDeclaration, ResourceDeclaration } from '../resource-declaration';
-import { Query } from '../types';
+import { FetchExistResponseResourceData } from '../types/formats';
+import { EditableResource, PartialResourceDeclaration, ResourceDeclaration } from '../types/resource-declaration';
+import { Query } from '../types/common';
 import { Options } from './types';
 
 export default class UpdateQueryBuilder<D extends ResourceDeclaration, C, P, M, I extends ResourceDeclaration[]> {

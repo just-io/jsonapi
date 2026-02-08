@@ -4,8 +4,8 @@ import {
     NewRelationshipValue,
     NewResource,
     ResourceDeclaration,
-} from '../resource-declaration';
-import { Operation } from '../types';
+} from '../types/resource-declaration';
+import { Operation } from '../types/common';
 import AddQueryBuilder from './add-query-builder';
 import AddRelationshipQueryBuilder from './add-relationship-query-builder';
 import GetQueryBuilder from './get-query-builder';

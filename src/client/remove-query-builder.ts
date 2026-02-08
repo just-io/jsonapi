@@ -1,6 +1,6 @@
-import { FetchNotExistResponseResourceData } from '../formatter';
-import { ResourceDeclaration } from '../resource-declaration';
-import { Query } from '../types';
+import { FetchNotExistResponseResourceData } from '../types/formats';
+import { ResourceDeclaration } from '../types/resource-declaration';
+import { Query } from '../types/common';
 import { Options } from './types';
 
 export default class RemoveQueryBuilder<D extends ResourceDeclaration, C, P> {

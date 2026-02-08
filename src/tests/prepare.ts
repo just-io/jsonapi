@@ -1,13 +1,14 @@
 import { Client, Fetcher } from '../client';
-import { DefaultMeta, DefaultPage, metaProvider, pageProvider } from '../defaults';
-import { QueryConverter } from '../query-converter';
-import { EditableResource, NewResource, Resource } from '../resource-declaration';
-import { ResourceStatus, ResourceKeeper, ResourceOptions } from '../resource-keeper';
-import { ResourceManager } from '../resource-manager';
-import { RelationshipOptions, ResourceSchema } from '../resource-schema';
-import schemas from '../schemas';
-import { ServerHandler } from '../server-handler';
-import { DataList, ResourceIdentifier } from '../types';
+import { DefaultMeta, DefaultPage, metaProvider, pageProvider } from '../server/defaults';
+import { QueryConverter } from '../server/query-converter';
+import { EditableResource, NewResource, Resource } from '../types/resource-declaration';
+import { ResourceStatus, ResourceKeeper, ResourceOptions } from '../server/resource-keeper';
+import { ResourceManager } from '../server/resource-manager';
+import { RelationshipOptions, ResourceSchema } from '../server/resource-schema';
+import schemas from '../server/schemas';
+import { ServerHandler } from '../server/server-handler';
+import { DataList, ResourceIdentifier } from '../types/common';
+import { clientPageProvider } from '../client/defaults';
 
 export type User = {
     id: string;
@@ -427,34 +428,6 @@ function fetchTagsByNoteId(
         offset,
     };
 }
-
-// function checkTags(
-//     context: Context,
-//     store: Store,
-//     id: string,
-//     resourceIdentifiers: ResourceIdentifier<'tags'>[]
-// ): RelationshipStatus {
-//     for (const resourceIdentifier of resourceIdentifiers) {
-//         const tag = store.tags.find((aTag) => aTag.id === resourceIdentifier.id);
-//         if (!tag) {
-//             return {
-//                 type: 'not-found',
-//                 id,
-//             };
-//         }
-//         if (context.role === 'user') {
-//             const tagNote = store.notes.find((note) => note.id === tag.note_id);
-//             if (tagNote?.user_id !== context.userId) {
-//                 return {
-//                     type: 'forbidden',
-//                     id,
-//                 };
-//             }
-//         }
-//     }
-
-//     return { type: 'ok' };
-// }
 
 class NotesResourceKeeper extends ResourceKeeper<NoteDeclaration, Context, DefaultPage> {
     #store: Store;
@@ -939,7 +912,7 @@ export function makeClient(): Client<Context, DefaultPage, DefaultMeta> {
         return serverHandler.handle(context, methodMap[method], url, body).then((result) => result.body);
     };
 
-    const client = new Client<Context, DefaultPage, DefaultMeta>(pageProvider, fetcher);
+    const client = new Client<Context, DefaultPage, DefaultMeta>(clientPageProvider, fetcher);
     client.setPrefix('/api/v1');
     client.setDomain('www.example.com');
 

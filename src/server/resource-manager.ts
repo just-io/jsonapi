@@ -1,4 +1,4 @@
-import { ErrorFactory, CommonError } from './errors';
+import { ErrorFactory } from './errors';
 import { ResourceStatus, ResourceKeeper, ResourceOptions } from './resource-keeper';
 import {
     PageProvider,
@@ -10,7 +10,7 @@ import {
     DataList,
     Operation,
     OperationResults,
-} from './types';
+} from '../types/common';
 import {
     ResourceDeclaration,
     CommonResource,
@@ -24,11 +24,12 @@ import {
     IncludedResources,
     RelationshipValue,
     NewRelationshipValue,
-} from './resource-declaration';
+} from '../types/resource-declaration';
 import { Checker } from './checker';
 import { ErrorSet, Pointer, Result } from '@just-io/schema';
 import { Eventable, EventEmitter, EventStore, Subscriber } from '@just-io/utils';
 import { filterResourceFields } from './utils';
+import { CommonError } from '../types/formats';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CommonResourceKeeper<C, P> = ResourceKeeper<any, C, P>;

@@ -9,9 +9,9 @@ import {
     PageProvider,
     Query,
     ResourceIdentifier,
-} from './types';
-import { CommonError, ErrorFactory } from './errors';
-import { FetchResponse, FetchResponseError, Formatter } from './formatter';
+} from '../types/common';
+import { ErrorFactory } from './errors';
+import { Formatter } from './formatter';
 import { QueryConverter } from './query-converter';
 import {
     CommonEditableResource,
@@ -21,9 +21,10 @@ import {
     OperationNewResource,
     Resource,
     ResourceDeclaration,
-} from './resource-declaration';
+} from '../types/resource-declaration';
 import schemas from './schemas';
 import { EventStore } from '@just-io/utils';
+import { CommonError, FetchResponse, FetchResponseError } from '../types/formats';
 
 export type Response<C, P, M> = {
     status: number;

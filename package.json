@@ -1,6 +1,6 @@
 {
   "name": "@sio/jsonapi",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Simple implementation of JSONAPI server",
   "types": "dist/types",
   "main": "dist/cjs/index.js",
@@ -18,12 +18,12 @@
     },
     "./client/*": {
       "import": {
-        "types": "./dist/types/client/*.d.ts",
-        "default": "./dist/mjs/client/*.js"
+        "types": "./dist/types/client/index.d.ts",
+        "default": "./dist/mjs/client/index.js"
       },
       "require": {
-        "types": "./dist/types/client/*.d.ts",
-        "default": "./dist/cjs/client/*.js"
+        "types": "./dist/types/client/index.d.ts",
+        "default": "./dist/cjs/client/index.js"
       }
     }
   },

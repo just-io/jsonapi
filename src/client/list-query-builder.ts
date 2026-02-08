@@ -1,6 +1,6 @@
-import { FetchResponseResourcesData } from '../formatter';
-import { PartialResourceDeclaration, ResourceDeclaration } from '../resource-declaration';
-import { Query } from '../types';
+import { FetchResponseResourcesData } from '../types/formats';
+import { PartialResourceDeclaration, ResourceDeclaration } from '../types/resource-declaration';
+import { Query } from '../types/common';
 import { Options } from './types';
 
 export default class ListQueryBuilder<D extends ResourceDeclaration, C, P, M, I extends ResourceDeclaration[]> {

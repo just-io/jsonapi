@@ -1,4 +1,4 @@
-import { CommonQuery } from '../types';
+import { CommonQuery } from '../types/common';
 
 export type Fetcher<C, P> = (
     context: C,

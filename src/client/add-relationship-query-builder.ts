@@ -1,11 +1,11 @@
-import { FetchResponseRelationshipsData } from '../formatter';
+import { FetchResponseRelationshipsData } from '../types/formats';
 import {
     MultipleRelationshipKeys,
     NewRelationshipValue,
     PartialResourceDeclaration,
     ResourceDeclaration,
-} from '../resource-declaration';
-import { Query } from '../types';
+} from '../types/resource-declaration';
+import { Query } from '../types/common';
 import { Options } from './types';
 
 export default class AddRelationshipQueryBuilder<

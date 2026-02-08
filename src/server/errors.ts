@@ -1,20 +1,5 @@
 import { Pointer } from '@just-io/schema';
-
-export interface CommonError {
-    code?: string;
-    source?:
-        | {
-              pointer: string;
-              header?: string;
-          }
-        | {
-              parameter: 'include' | 'fields' | 'sort' | 'filter' | 'page' | 'query' | 'method';
-              header?: string;
-          };
-    status: number;
-    title: string;
-    detail?: string;
-}
+import { CommonError } from '../types/formats';
 
 // add lang
 // move to formatters

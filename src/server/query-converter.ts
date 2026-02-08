@@ -1,7 +1,8 @@
 import { ErrorSet } from '@just-io/schema';
-import { ErrorFactory, CommonError } from './errors';
-import { ResourceDeclaration } from './resource-declaration';
-import { ArrayFields, PageProvider, Query, QueryParams, QueryRef } from './types';
+import { ErrorFactory } from './errors';
+import { ResourceDeclaration } from '../types/resource-declaration';
+import { ArrayFields, PageProvider, Query, QueryParams, QueryRef } from '../types/common';
+import { CommonError } from '../types/formats';
 
 export class QueryConverter<P> {
     #domain = '';

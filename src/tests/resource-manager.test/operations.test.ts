@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import { Context, makeResourceManager, NoteDeclaration, TagDeclaration } from '../prepare';
-import { operation } from '../../operation';
-import { AddResourceOperation } from '../../types';
+import { operation } from '../../server/operation';
+import { AddResourceOperation } from '../../types/common';
 
 describe('ResourceManager', () => {
     describe('method operations', () => {

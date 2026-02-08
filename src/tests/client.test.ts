@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import { Context, makeClient, NoteDeclaration, TagDeclaration, UserDeclaration } from './prepare';
-import { operation } from '../operation';
+import { operation } from '../server/operation';
 
 describe('Client', () => {
     const context: Context = {

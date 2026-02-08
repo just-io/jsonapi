@@ -4,8 +4,8 @@ import {
     FilterDeclaration,
     RelationshipDeclaration,
     ResourceDeclaration,
-} from './resource-declaration';
-import { DataList, ResourceIdentifier } from './types';
+} from '../types/resource-declaration';
+import { DataList, ResourceIdentifier } from '../types/common';
 
 export type AttributeFieldSchema<A extends AttributeDeclaration<unknown>> = (A['mode'] extends 'readonly'
     ? {

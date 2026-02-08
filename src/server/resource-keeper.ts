@@ -6,9 +6,9 @@ import {
     Attributes,
     // Relationships,
     RelationshipValue,
-} from './resource-declaration';
+} from '../types/resource-declaration';
 import { ResourceSchema } from './resource-schema';
-import { DataList, UntypedKeys } from './types';
+import { DataList, UntypedKeys } from '../types/common';
 
 export interface ResourceOptions<D extends ResourceDeclaration, P> {
     page?: P;

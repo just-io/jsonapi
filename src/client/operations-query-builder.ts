@@ -3,9 +3,9 @@ import {
     FetchNotExistResponseResourceData,
     FetchResponseRelationshipData,
     FetchResponseRelationshipsData,
-} from '../formatter';
-import { MultipleKeys, ResourceDeclaration } from '../resource-declaration';
-import { Operation } from '../types';
+} from '../types/formats';
+import { MultipleKeys, ResourceDeclaration } from '../types/resource-declaration';
+import { Operation } from '../types/common';
 import { Options } from './types';
 
 type OperationResult<
