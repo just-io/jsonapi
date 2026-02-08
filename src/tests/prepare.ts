@@ -1,4 +1,6 @@
+import { Client, Fetcher } from '../client';
 import { DefaultMeta, DefaultPage, metaProvider, pageProvider } from '../defaults';
+import { QueryConverter } from '../query-converter';
 import { EditableResource, NewResource, Resource } from '../resource-declaration';
 import { ResourceStatus, ResourceKeeper, ResourceOptions } from '../resource-keeper';
 import { ResourceManager } from '../resource-manager';
@@ -48,16 +50,18 @@ export type UserDeclaration = {
             mode: 'readonly';
         };
     };
-    filter: {
-        login: {
-            multiple: true;
-            type: string[];
+    listable: {
+        status: true;
+        filter: {
+            login: {
+                multiple: true;
+                type: string[];
+            };
+        };
+        sort: {
+            login: { dir: 'desc' };
         };
     };
-    sort: {
-        login: { dir: 'desc' };
-    };
-    listable: true;
     addable: false;
     updatable: false;
     removable: false;
@@ -97,9 +101,11 @@ export type NoteDeclaration = {
             mode: 'editable';
         };
     };
-    filter: Record<string, never>;
-    sort: Record<string, never>;
-    listable: true;
+    listable: {
+        status: true;
+        filter: Record<string, never>;
+        sort: Record<string, never>;
+    };
     addable: true;
     updatable: true;
     removable: true;
@@ -119,14 +125,16 @@ export type TagDeclaration = {
             mode: 'editable';
         };
     };
-    filter: {
-        name: {
-            multiple: false;
-            type: string;
+    listable: {
+        status: true;
+        filter: {
+            name: {
+                multiple: false;
+                type: string;
+            };
         };
+        sort: Record<string, never>;
     };
-    sort: Record<string, never>;
-    listable: true;
     addable: true;
     updatable: true;
     removable: true;
@@ -234,19 +242,22 @@ class UsersResourceKeeper extends ResourceKeeper<UserDeclaration, Context, Defau
                 get: async (
                     context: Context,
                     resourceIds: string[],
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     options: RelationshipOptions<DefaultPage>,
                 ): Promise<Record<string, DataList<ResourceIdentifier<'notes'>>>> => {
+                    const limit = options.page?.size ?? 10;
+                    const offset = options.page?.number ?? 0;
                     return Object.fromEntries(
                         resourceIds.map((resourceId) => {
                             const userNotes = this.#store.notes.filter((aNote) => resourceId === aNote.user_id);
                             return [
                                 resourceId,
                                 {
-                                    items: userNotes.map((aNote) => ({ id: aNote.id, type: 'notes' })),
+                                    items: userNotes
+                                        .map((aNote) => ({ id: aNote.id, type: 'notes' }) as const)
+                                        .slice(offset, offset + limit),
                                     total: userNotes.length,
-                                    limit: 10,
-                                    offset: 0,
+                                    limit,
+                                    offset,
                                 },
                             ];
                         }),
@@ -301,7 +312,7 @@ class UsersResourceKeeper extends ResourceKeeper<UserDeclaration, Context, Defau
         context: Context,
         ids: string[],
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        options: Pick<ResourceOptions<UserDeclaration, DefaultPage>, 'fields' | 'page'>,
+        options: Pick<ResourceOptions<UserDeclaration, DefaultPage>, 'page'>,
     ): Promise<Resource<UserDeclaration>[]> {
         return ids.map((id) => {
             const user = this.#store.users.find((anUser) => id === anUser.id)!;
@@ -600,7 +611,7 @@ class NotesResourceKeeper extends ResourceKeeper<NoteDeclaration, Context, Defau
         context: Context,
         ids: string[],
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        options: Pick<ResourceOptions<NoteDeclaration, DefaultPage>, 'fields' | 'page'>,
+        options: Pick<ResourceOptions<NoteDeclaration, DefaultPage>, 'page'>,
     ): Promise<Resource<NoteDeclaration>[]> {
         return ids.map((id) => {
             const note = this.#store.notes.find((aNote) => aNote.id === id)!;
@@ -796,7 +807,7 @@ class TagsResourceKeeper extends ResourceKeeper<TagDeclaration, Context, Default
         context: Context,
         ids: string[],
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        options: Pick<ResourceOptions<TagDeclaration, DefaultPage>, 'fields' | 'page'>,
+        options: Pick<ResourceOptions<TagDeclaration, DefaultPage>, 'page'>,
     ): Promise<Resource<TagDeclaration>[]> {
         return ids.map((id) => {
             const tag = this.#store.tags.find((aTag) => aTag.id === id)!;
@@ -908,4 +919,29 @@ export function makeServerHandler(): ServerHandler<Context, DefaultPage, Default
     serverHandler.setDomain('www.example.com');
 
     return serverHandler;
+}
+
+export function makeClient(): Client<Context, DefaultPage, DefaultMeta> {
+    const serverHandler = makeServerHandler();
+    const queryConverter = new QueryConverter<DefaultPage>(pageProvider);
+    queryConverter.setPrefix('/api/v1');
+    queryConverter.setDomain('www.example.com');
+    const methodMap = {
+        get: 'GET',
+        add: 'POST',
+        operations: 'POST',
+        update: 'PATCH',
+        remove: 'DELETE',
+    };
+
+    const fetcher: Fetcher<Context, DefaultPage> = (context, method, query, body) => {
+        const url = queryConverter.make(query);
+        return serverHandler.handle(context, methodMap[method], url, body).then((result) => result.body);
+    };
+
+    const client = new Client<Context, DefaultPage, DefaultMeta>(pageProvider, fetcher);
+    client.setPrefix('/api/v1');
+    client.setDomain('www.example.com');
+
+    return client;
 }

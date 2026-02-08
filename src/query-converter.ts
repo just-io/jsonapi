@@ -128,6 +128,8 @@ export class QueryConverter<P> {
                     );
                 }
                 if (scopedParam[1] === 'fields') {
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                    // @ts-expect-error
                     queryParams.fields[scopedParam[2]] = value ? value.split(',') : [];
                     if (queryParams.fields[scopedParam[2]]!.some((field) => !field)) {
                         throw new ErrorSet<CommonError>().add(

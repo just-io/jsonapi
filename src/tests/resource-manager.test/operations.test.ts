@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import { Context, makeResourceManager, NoteDeclaration, TagDeclaration } from '../prepare';
-import { ErrorSet } from '@just-io/schema';
 import { operation } from '../../operation';
 import { AddResourceOperation } from '../../types';
 
@@ -16,7 +15,7 @@ describe('ResourceManager', () => {
         };
 
         test('apply one operation', async () => {
-            const results = await resourceManager.operations(context, [
+            const { result } = await resourceManager.operations(context, [
                 {
                     op: 'add',
                     data: {
@@ -30,10 +29,11 @@ describe('ResourceManager', () => {
                     },
                 } as AddResourceOperation<NoteDeclaration>,
             ]);
+            assert.ok(result.ok === true);
 
-            const id = results[0].id;
+            const id = result.value[0].id;
 
-            assert.deepStrictEqual(results, [
+            assert.deepStrictEqual(result.value, [
                 {
                     type: 'notes',
                     id,
@@ -60,41 +60,36 @@ describe('ResourceManager', () => {
         });
 
         test('apply two operation with lid', async () => {
-            const results = await resourceManager.operations(context, [
+            const { result } = await resourceManager.operations(context, [
                 operation.add<NoteDeclaration>({
-                    op: 'add',
-                    data: {
-                        type: 'notes',
-                        lid: 'new-note',
-                        attributes: {
-                            title: 'New Note',
-                        },
-                        relationships: {
-                            tags: [],
-                        },
+                    type: 'notes',
+                    lid: 'new-note',
+                    attributes: {
+                        title: 'New Note',
+                    },
+                    relationships: {
+                        tags: [],
                     },
                 }),
                 operation.add<TagDeclaration>({
-                    op: 'add',
-                    data: {
-                        type: 'tags',
-                        attributes: {
-                            name: 'new one',
-                        },
-                        relationships: {
-                            note: {
-                                type: 'notes',
-                                lid: 'new-note',
-                            },
+                    type: 'tags',
+                    attributes: {
+                        name: 'new one',
+                    },
+                    relationships: {
+                        note: {
+                            type: 'notes',
+                            lid: 'new-note',
                         },
                     },
                 }),
             ]);
+            assert.ok(result.ok === true);
 
-            const noteId = results[0].id;
-            const tagId = results[1].id;
+            const noteId = result.value[0].id;
+            const tagId = result.value[1].id;
 
-            assert.deepStrictEqual(results, [
+            assert.deepStrictEqual(result.value, [
                 {
                     type: 'notes',
                     id: noteId,
@@ -133,57 +128,50 @@ describe('ResourceManager', () => {
             ]);
         });
 
-        test('should throw error of add tag with invalid lid', async () => {
-            await assert.rejects(
-                () =>
-                    resourceManager.operations(context, [
-                        {
-                            op: 'add',
-                            data: {
+        test('should return error of add tag with invalid lid', async () => {
+            const { result } = await resourceManager.operations(context, [
+                {
+                    op: 'add',
+                    data: {
+                        type: 'notes',
+                        lid: 'new-note',
+                        attributes: {
+                            title: 'New Note',
+                        },
+                        relationships: {
+                            tags: [],
+                        },
+                    },
+                } as AddResourceOperation<NoteDeclaration>,
+                {
+                    op: 'add',
+                    data: {
+                        type: 'tags',
+                        attributes: {
+                            name: 'new one',
+                        },
+                        relationships: {
+                            note: {
                                 type: 'notes',
-                                lid: 'new-note',
-                                attributes: {
-                                    title: 'New Note',
-                                },
-                                relationships: {
-                                    tags: [],
-                                },
+                                lid: 'note',
                             },
-                        } as AddResourceOperation<NoteDeclaration>,
-                        {
-                            op: 'add',
-                            data: {
-                                type: 'tags',
-                                attributes: {
-                                    name: 'new one',
-                                },
-                                relationships: {
-                                    note: {
-                                        type: 'notes',
-                                        lid: 'note',
-                                    },
-                                },
-                            },
-                        } as AddResourceOperation<TagDeclaration>,
-                    ]),
-                (err) => {
-                    assert.ok(err instanceof ErrorSet);
-                    assert.deepStrictEqual(err.toJSON(), {
-                        errors: [
-                            {
-                                detail: 'The resource with lid does not have reference.',
-                                source: {
-                                    pointer: '/1/data/relationships/note/lid',
-                                },
-                                status: 400,
-                                title: 'Invalid Resource Lid',
-                            },
-                        ],
-                    });
-
-                    return true;
-                },
-            );
+                        },
+                    },
+                } as AddResourceOperation<TagDeclaration>,
+            ]);
+            assert.ok(result.ok === false);
+            assert.deepStrictEqual(result.error.toJSON(), {
+                errors: [
+                    {
+                        detail: 'The resource with lid does not have reference.',
+                        source: {
+                            pointer: '/1/data/relationships/note/lid',
+                        },
+                        status: 400,
+                        title: 'Invalid Resource Lid',
+                    },
+                ],
+            });
         });
     });
 });

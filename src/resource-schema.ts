@@ -160,7 +160,7 @@ export type FilterFieldSchema<F extends FilterDeclaration<unknown>> = F extends 
       };
 
 export type FilterSchema<D extends ResourceDeclaration> = {
-    [K in keyof D['filter']]: FilterFieldSchema<D['filter'][K]>;
+    [K in keyof D['listable']['filter']]: FilterFieldSchema<D['listable']['filter'][K]>;
 };
 
 export type ResourceSchema<D extends ResourceDeclaration, C, P> = {
@@ -177,5 +177,5 @@ export type ResourceSchema<D extends ResourceDeclaration, C, P> = {
     : {
           listable: true;
           filter: FilterSchema<D>;
-          sort: D['sort'];
+          sort: D['listable']['sort'];
       });

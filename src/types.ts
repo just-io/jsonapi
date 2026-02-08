@@ -88,12 +88,14 @@ export type ArrayFields<IRD extends ResourceDeclaration[]> = IRD extends [infer 
 export type QueryParams<P, D extends ResourceDeclaration, I extends ResourceDeclaration[]> = {
     fields?: ArrayFields<[D, ...I]>;
     filter?: {
-        [K in keyof D['filter']]?: string[];
+        [K in keyof D['listable']['filter']]?: string[];
     };
     include?: string[][];
     page?: P;
     sort?: {
-        field: D['sort'][keyof D['sort']] extends never ? never : keyof D['sort'] & string;
+        field: D['listable']['sort'][keyof D['listable']['sort']] extends never
+            ? never
+            : keyof D['listable']['sort'] & string;
         asc: boolean;
     }[];
 };
@@ -205,9 +207,9 @@ export type OperationResults<OA extends Operation<any, any>[]> = {
 
 export type DataList<V> = {
     items: V[];
-    offset?: number;
-    total?: number;
-    limit?: number;
+    offset: number;
+    total: number;
+    limit: number;
 };
 
 export type UntypedKeys<Obj, T> = {

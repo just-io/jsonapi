@@ -1,5 +1,5 @@
 import { defaultErrorFormatter, ErrorKeeper, ErrorSet, Pointer } from '@just-io/schema';
-import { ResourceManager } from './resource-manager';
+import { EventMap, ResourceManager } from './resource-manager';
 import {
     CommonQuery,
     DataList,
@@ -23,10 +23,12 @@ import {
     ResourceDeclaration,
 } from './resource-declaration';
 import schemas from './schemas';
+import { EventStore } from '@just-io/utils';
 
-export type Response = {
+export type Response<C, P, M> = {
     status: number;
-    body: FetchResponse | FetchResponseError;
+    body: FetchResponse<M> | FetchResponseError;
+    eventStore: EventStore<EventMap<C, P>>;
 };
 
 const relationshipSchema = schemas.union<ResourceIdentifier<string> | ResourceIdentifier<string>[] | null>(
@@ -338,12 +340,22 @@ export class ServerHandler<C, P, M> {
         return this;
     }
 
-    async #handleGet(context: C, query: CommonQuery<P>): Promise<Response> {
+    async #handleGet(context: C, query: CommonQuery<P>): Promise<Response<C, P, M>> {
         if ('id' in query.ref && 'relationship' in query.ref) {
-            const { relationship, included } = await this.#resourceManager.relationship(
+            const { result, eventStore } = await this.#resourceManager.relationship(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'relationship'>,
             );
+
+            if (!result.ok) {
+                return {
+                    status: result.error.errors[0].status ?? 422,
+                    body: result.error.toJSON(),
+                    eventStore,
+                };
+            }
+
+            const { relationship, included } = result.value;
 
             if (relationship === null) {
                 return {
@@ -353,6 +365,7 @@ export class ServerHandler<C, P, M> {
                         relationship,
                         included,
                     ),
+                    eventStore,
                 };
             } else if ('items' in relationship) {
                 return {
@@ -362,6 +375,7 @@ export class ServerHandler<C, P, M> {
                         relationship,
                         included,
                     ),
+                    eventStore,
                 };
             } else {
                 return {
@@ -371,15 +385,27 @@ export class ServerHandler<C, P, M> {
                         relationship,
                         included,
                     ),
+                    eventStore,
                 };
             }
         }
 
         if ('id' in query.ref) {
-            const { resource, included } = await this.#resourceManager.get(
+            const { result, eventStore } = await this.#resourceManager.get(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'id'>,
             );
+
+            if (!result.ok) {
+                return {
+                    status: result.error.errors[0].status ?? 422,
+                    body: result.error.toJSON(),
+                    eventStore,
+                };
+            }
+
+            const { resource, included } = result.value;
+
             if (resource === null) {
                 return {
                     status: 404,
@@ -388,6 +414,7 @@ export class ServerHandler<C, P, M> {
                         resource,
                         included,
                     ),
+                    eventStore,
                 };
             } else {
                 return {
@@ -397,11 +424,22 @@ export class ServerHandler<C, P, M> {
                         resource,
                         included,
                     ),
+                    eventStore,
                 };
             }
         }
 
-        const { resources, included } = await this.#resourceManager.list(context, query);
+        const { result, eventStore } = await this.#resourceManager.list(context, query);
+
+        if (!result.ok) {
+            return {
+                status: result.error.errors[0].status ?? 422,
+                body: result.error.toJSON(),
+                eventStore,
+            };
+        }
+
+        const { resources, included } = result.value;
 
         return {
             status: 200,
@@ -410,10 +448,11 @@ export class ServerHandler<C, P, M> {
                 resources,
                 included,
             ),
+            eventStore,
         };
     }
 
-    async #handlePost(context: C, query: CommonQuery<P>, body: unknown): Promise<Response> {
+    async #handlePost(context: C, query: CommonQuery<P>, body: unknown): Promise<Response<C, P, M>> {
         if ('id' in query.ref && !('relationship' in query.ref)) {
             throw new ErrorSet().add(ErrorFactory.makeQueryError('Should not contain resource id'));
         }
@@ -426,12 +465,22 @@ export class ServerHandler<C, P, M> {
             if (!resourceIdentifiersBodySchema.is(body, errorKeeper)) {
                 throw errorKeeper.makeErrorSet();
             }
-            const { relationship, included } = await this.#resourceManager.addRelationships(
+            const { result, eventStore } = await this.#resourceManager.addRelationships(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'relationship'>,
                 body.data,
                 new Pointer('', 'data'),
             );
+
+            if (!result.ok) {
+                return {
+                    status: result.error.errors[0].status ?? 422,
+                    body: result.error.toJSON(),
+                    eventStore,
+                };
+            }
+
+            const { relationship, included } = result.value;
 
             return {
                 status: 200,
@@ -440,6 +489,7 @@ export class ServerHandler<C, P, M> {
                     relationship as DataList<ResourceIdentifier<string>>,
                     included,
                 ),
+                eventStore,
             };
         } else {
             const errorKeeper = new ErrorKeeper(new Pointer(''), 'default', defaultErrorFormatter);
@@ -447,12 +497,22 @@ export class ServerHandler<C, P, M> {
             if (!newResourceBodySchema.is(body, errorKeeper)) {
                 throw errorKeeper.makeErrorSet();
             }
-            const { resource, included } = await this.#resourceManager.add(
+            const { result, eventStore } = await this.#resourceManager.add(
                 context,
                 query,
                 body.data,
                 new Pointer('', 'data'),
             );
+
+            if (!result.ok) {
+                return {
+                    status: result.error.errors[0].status ?? 422,
+                    body: result.error.toJSON(),
+                    eventStore,
+                };
+            }
+
+            const { resource, included } = result.value;
 
             return {
                 status: 200,
@@ -461,18 +521,19 @@ export class ServerHandler<C, P, M> {
                     resource,
                     included,
                 ),
+                eventStore,
             };
         }
     }
 
-    async #handleOperations(context: C, body: unknown): Promise<Response> {
+    async #handleOperations(context: C, body: unknown): Promise<Response<C, P, M>> {
         const errorKeeper = new ErrorKeeper(new Pointer(''), 'default', defaultErrorFormatter);
 
         if (!operationsSchema.is(body, errorKeeper)) {
             throw errorKeeper.makeErrorSet();
         }
 
-        const results = await this.#resourceManager.operations(
+        const { result, eventStore } = await this.#resourceManager.operations(
             context,
             body['atomic:operations'].map((operation) => {
                 if (operation.op === 'add' && !('ref' in operation)) {
@@ -519,14 +580,22 @@ export class ServerHandler<C, P, M> {
             new Pointer('', 'atomic:operations'),
         );
 
+        if (!result.ok) {
+            return {
+                status: result.error.errors[0].status ?? 422,
+                body: result.error.toJSON(),
+                eventStore,
+            };
+        }
+
         return {
             status: 200,
             body: {
-                'atomic:results': results.map((result, i) => {
+                'atomic:results': result.value.map((value, i) => {
                     const operation = body['atomic:operations'][i];
                     if (operation.op === 'add' && !('ref' in operation)) {
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const resource = result as Resource<any>;
+                        const resource = value as Resource<any>;
                         return this.#formatter.formatResource(
                             { ref: { type: operation.data.type, id: resource.id } },
                             resource,
@@ -535,7 +604,7 @@ export class ServerHandler<C, P, M> {
                     }
                     if (operation.op === 'update' && !('ref' in operation)) {
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const resource = result as Resource<any>;
+                        const resource = value as Resource<any>;
                         return this.#formatter.formatResource(
                             { ref: { type: operation.data.type, id: resource.id } },
                             resource,
@@ -543,11 +612,11 @@ export class ServerHandler<C, P, M> {
                         );
                     }
                     if (operation.op === 'remove' && !('data' in operation)) {
-                        const id = result as string;
+                        const id = value as string;
                         return this.#formatter.formatResource({ ref: { type: operation.ref.type, id } }, null, []);
                     }
                     if (operation.op === 'add' && 'data' in operation) {
-                        const [id, relationship] = result as [string, DataList<ResourceIdentifier<string>>];
+                        const [id, relationship] = value as [string, DataList<ResourceIdentifier<string>>];
                         return this.formatter.formatRelationships(
                             {
                                 ref: {
@@ -561,7 +630,7 @@ export class ServerHandler<C, P, M> {
                         );
                     }
                     if (operation.op === 'update' && 'ref' in operation) {
-                        const [id, relationship] = result as [
+                        const [id, relationship] = value as [
                             string,
                             DataList<ResourceIdentifier<string>> | ResourceIdentifier<string> | null,
                         ];
@@ -604,7 +673,7 @@ export class ServerHandler<C, P, M> {
                         }
                     }
                     if (operation.op === 'remove' && 'data' in operation) {
-                        const [id, relationship] = result as [string, DataList<ResourceIdentifier<string>>];
+                        const [id, relationship] = value as [string, DataList<ResourceIdentifier<string>>];
                         return this.formatter.formatRelationships(
                             {
                                 ref: {
@@ -620,10 +689,11 @@ export class ServerHandler<C, P, M> {
                     throw new Error('Invalid');
                 }),
             },
+            eventStore,
         };
     }
 
-    async #handlePatch(context: C, query: CommonQuery<P>, body: unknown): Promise<Response> {
+    async #handlePatch(context: C, query: CommonQuery<P>, body: unknown): Promise<Response<C, P, M>> {
         if (!('id' in query.ref)) {
             throw new ErrorSet().add(ErrorFactory.makeQueryError('Should contain resource id'));
         }
@@ -633,7 +703,7 @@ export class ServerHandler<C, P, M> {
             if (!relationshipBodySchema.is(body, errorKeeper)) {
                 throw errorKeeper.makeErrorSet();
             }
-            const { relationship, included } = await this.#resourceManager.updateRelationship(
+            const { result, eventStore } = await this.#resourceManager.updateRelationship(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'relationship'>,
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -642,6 +712,16 @@ export class ServerHandler<C, P, M> {
                 new Pointer('', 'data'),
             );
 
+            if (!result.ok) {
+                return {
+                    status: result.error.errors[0].status ?? 422,
+                    body: result.error.toJSON(),
+                    eventStore,
+                };
+            }
+
+            const { relationship, included } = result.value;
+
             return {
                 status: 200,
                 body: this.formatter.formatRelationships(
@@ -649,6 +729,7 @@ export class ServerHandler<C, P, M> {
                     relationship as DataList<ResourceIdentifier<string>>,
                     included,
                 ),
+                eventStore,
             };
         } else {
             const errorKeeper = new ErrorKeeper(new Pointer(''), 'default', defaultErrorFormatter);
@@ -656,12 +737,22 @@ export class ServerHandler<C, P, M> {
             if (!commonResourceBodySchema.is(body, errorKeeper)) {
                 throw errorKeeper.makeErrorSet();
             }
-            const { resource, included } = await this.#resourceManager.update(
+            const { result, eventStore } = await this.#resourceManager.update(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'id'>,
                 body.data as EditableResource<ResourceDeclaration>,
                 new Pointer('', 'data'),
             );
+
+            if (!result.ok) {
+                return {
+                    status: result.error.errors[0].status ?? 422,
+                    body: result.error.toJSON(),
+                    eventStore,
+                };
+            }
+
+            const { resource, included } = result.value;
 
             return {
                 status: 200,
@@ -670,11 +761,12 @@ export class ServerHandler<C, P, M> {
                     resource,
                     included,
                 ),
+                eventStore,
             };
         }
     }
 
-    async #handleDelete(context: C, query: CommonQuery<P>, body: unknown): Promise<Response> {
+    async #handleDelete(context: C, query: CommonQuery<P>, body: unknown): Promise<Response<C, P, M>> {
         if (!('id' in query.ref)) {
             throw new ErrorSet().add(ErrorFactory.makeQueryError('Should contain resource id'));
         }
@@ -684,12 +776,22 @@ export class ServerHandler<C, P, M> {
             if (!resourceIdentifiersBodySchema.is(body, errorKeeper)) {
                 throw errorKeeper.makeErrorSet();
             }
-            const { relationship, included } = await this.#resourceManager.removeRelationships(
+            const { result, eventStore } = await this.#resourceManager.removeRelationships(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'relationship'>,
                 body.data,
                 new Pointer('', 'data'),
             );
+
+            if (!result.ok) {
+                return {
+                    status: result.error.errors[0].status ?? 422,
+                    body: result.error.toJSON(),
+                    eventStore,
+                };
+            }
+
+            const { relationship, included } = result.value;
 
             return {
                 status: 200,
@@ -698,9 +800,10 @@ export class ServerHandler<C, P, M> {
                     relationship as DataList<ResourceIdentifier<string>>,
                     included,
                 ),
+                eventStore,
             };
         } else {
-            await this.#resourceManager.remove(
+            const { eventStore } = await this.#resourceManager.remove(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'id'>,
                 new Pointer('', 'data'),
@@ -709,6 +812,7 @@ export class ServerHandler<C, P, M> {
             return {
                 status: 200,
                 body: this.formatter.formatResource(query as Query<P, ResourceDeclaration, [], 'id'>, null, []),
+                eventStore,
             };
         }
     }
@@ -718,7 +822,7 @@ export class ServerHandler<C, P, M> {
         method: 'GET' | 'POST' | 'PATCH' | 'DELETE' | string,
         url: string,
         body: unknown,
-    ): Promise<Response> {
+    ): Promise<Response<C, P, M>> {
         let query: CommonQuery<P>;
         try {
             query = this.queryConverter.parse(url);
@@ -737,11 +841,13 @@ export class ServerHandler<C, P, M> {
                 return {
                     status: (err as ErrorSet<CommonError>).errors[0].status ?? 422,
                     body: err.toJSON(),
+                    eventStore: this.#resourceManager.makeStore(),
                 };
             }
             return {
                 status: 500,
                 body: { errors: [ErrorFactory.makeInternalError()] },
+                eventStore: this.#resourceManager.makeStore(),
             };
         }
     }

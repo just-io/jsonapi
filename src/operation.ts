@@ -9,28 +9,52 @@ import {
 } from './types';
 
 export const operation = {
-    add<D extends ResourceDeclaration>(op: AddResourceOperation<D>): AddResourceOperation<D> {
-        return op;
+    add<D extends ResourceDeclaration>(data: AddResourceOperation<D>['data']): AddResourceOperation<D> {
+        return {
+            op: 'add',
+            data,
+        };
     },
-    update<D extends ResourceDeclaration>(op: UpdateResourceOperation<D>): UpdateResourceOperation<D> {
-        return op;
+    update<D extends ResourceDeclaration>(data: UpdateResourceOperation<D>['data']): UpdateResourceOperation<D> {
+        return {
+            op: 'update',
+            data,
+        };
     },
-    remove<D extends ResourceDeclaration>(op: RemoveResourceOperation<D>): RemoveResourceOperation<D> {
-        return op;
+    remove<D extends ResourceDeclaration>(ref: RemoveResourceOperation<D>['ref']): RemoveResourceOperation<D> {
+        return {
+            op: 'remove',
+            ref,
+        };
     },
     addRelationships<D extends ResourceDeclaration, R extends MultipleKeys<D>>(
-        op: AddRelationshipsOperation<D, R>,
+        ref: AddRelationshipsOperation<D, R>['ref'],
+        data: AddRelationshipsOperation<D, R>['data'],
     ): AddRelationshipsOperation<D, R> {
-        return op;
+        return {
+            op: 'add-relationships',
+            ref,
+            data,
+        };
     },
     updateRelationships<D extends ResourceDeclaration, R extends MultipleKeys<D>>(
-        op: UpdateRelationshipsOperation<D, R>,
+        ref: UpdateRelationshipsOperation<D, R>['ref'],
+        data: UpdateRelationshipsOperation<D, R>['data'],
     ): UpdateRelationshipsOperation<D, R> {
-        return op;
+        return {
+            op: 'update-relationships',
+            ref,
+            data,
+        };
     },
     removeRelationships<D extends ResourceDeclaration, R extends MultipleKeys<D>>(
-        op: RemoveRelationshipsOperation<D, R>,
+        ref: RemoveRelationshipsOperation<D, R>['ref'],
+        data: RemoveRelationshipsOperation<D, R>['data'],
     ): RemoveRelationshipsOperation<D, R> {
-        return op;
+        return {
+            op: 'remove-relationships',
+            ref,
+            data,
+        };
     },
 };

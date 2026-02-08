@@ -26,8 +26,8 @@ import {
     NewRelationshipValue,
 } from './resource-declaration';
 import { Checker } from './checker';
-import { ErrorSet, Pointer } from '@just-io/schema';
-import { Eventable, EventEmitter, EventList, Subscriber } from '@just-io/utils';
+import { ErrorSet, Pointer, Result } from '@just-io/schema';
+import { Eventable, EventEmitter, EventStore, Subscriber } from '@just-io/utils';
 import { filterResourceFields } from './utils';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -324,7 +324,6 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         }
         const status = (await resourceKeeper.status(context, [query.ref.id]))[query.ref.id];
         if (!status || status.type === 'not-found') {
-            this.#eventEmitter.emit('get', context, query, null, []);
             return {
                 resource: null,
                 included: [],
@@ -334,7 +333,6 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
             throw new ErrorSet<CommonError>().add(ErrorFactory.makeForbiddenError('query', status.reason));
         }
         const [resource] = await resourceKeeper.get(context, [query.ref.id], {
-            fields: query.params?.fields?.[query.ref.type],
             page: query.params?.page,
         });
         const included: CommonResource[] = [];
@@ -360,21 +358,37 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
     async get<D extends ResourceDeclaration, I extends ResourceDeclaration[] = []>(
         context: C,
         query: Query<P, D, I, 'id'>,
-    ): Promise<{ resource: Resource<D> | null; included: IncludedResources<I>[] }> {
+    ): Promise<{
+        result: Result<
+            {
+                resource: Resource<D> | null;
+                included: IncludedResources<I>[];
+            },
+            ErrorSet<CommonError>
+        >;
+        eventStore: EventStore<EventMap<C, P>>;
+    }> {
         if (!this.#initialized) {
             throw new Error('Should be initialized');
         }
+        const eventStore = this.#eventEmitter.makeStore();
         try {
             const { resource, included } = await this.#get(context, query, 'query');
-            this.#eventEmitter.emit('get', context, query, resource, included);
+            eventStore.add('get', context, query, resource, included);
 
             return {
-                resource,
-                included,
+                result: {
+                    ok: true,
+                    value: {
+                        resource,
+                        included,
+                    },
+                },
+                eventStore,
             };
         } catch (error) {
             if (error instanceof ErrorSet) {
-                this.#eventEmitter.emit(
+                eventStore.add(
                     'error',
                     context,
                     {
@@ -383,6 +397,14 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                     },
                     error,
                 );
+
+                return {
+                    result: {
+                        ok: false,
+                        error,
+                    },
+                    eventStore,
+                };
             }
 
             throw error;
@@ -410,82 +432,48 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         if (status.type === 'not-found') {
             throw new ErrorSet<CommonError>().add(ErrorFactory.makeNotFoundError('query'));
         }
+
         const relationshipInfo = resourceKeeper.schema.relationships[query.ref.relationship];
         if (!relationshipInfo) {
             throw new ErrorSet<CommonError>().add(ErrorFactory.makeNotFoundError('query'));
         }
+
         const included: CommonResource[] = [];
+        let relationship: RelationshipValue<D['relationships'][R]>;
+
         if (relationshipInfo.multiple) {
-            const list = (
+            relationship = (
                 await relationshipInfo.get(context, [query.ref.id], {
                     page: query.params?.page,
                     asMain: true,
                 })
-            )[query.ref.id];
-            if (query.params?.include?.length) {
-                const idsByType = list.items.reduce(
-                    (obj, resourceIdentifier) => {
-                        if (!obj[resourceIdentifier.type]) {
-                            obj[resourceIdentifier.type] = [];
-                        }
-                        obj[resourceIdentifier.type].push(resourceIdentifier.id);
-                        return obj;
-                    },
-                    {} as Record<string, string[]>,
-                );
-
-                const resources: CommonResource[] = [];
-                for (const [type, ids] of Object.entries(idsByType)) {
-                    const resourcesByType = await this.#resourceKeepers[type].get(context, ids, {
-                        // fields: query.params.fields[type],
-                        page: query.params.page,
-                    });
-                    resources.push(...resourcesByType);
-                }
-                for (const relationshipInclude of query.params.include) {
-                    const includedResources = await this.#listIncludes(
-                        context,
-                        query,
-                        query.ref.type,
-                        resources,
-                        relationshipInclude,
-                    );
-                    included.push(...includedResources);
-                }
-            }
-
-            return {
-                relationship: list as RelationshipValue<D['relationships'][R]>,
-                included: included as IncludedResources<I>[],
-            };
+            )[query.ref.id] as RelationshipValue<D['relationships'][R]>;
         } else {
-            const resourceIdentifier = (await relationshipInfo.get(context, [query.ref.id]))[query.ref.id];
-            if (resourceIdentifier && query.params?.include?.length) {
-                const [resource] = await this.#resourceKeepers[resourceIdentifier.type].get(
-                    context,
-                    [resourceIdentifier.id],
-                    {
-                        fields: query.params.fields?.[resourceIdentifier.type],
-                        page: query.params.page,
-                    },
-                );
-                for (const relationshipInclude of query.params.include) {
-                    const includedResources = await this.#listIncludes(
-                        context,
-                        query,
-                        resource.type,
-                        [resource],
-                        relationshipInclude,
-                    );
-                    included.push(...includedResources);
-                }
-            }
-
-            return {
-                relationship: resourceIdentifier as RelationshipValue<D['relationships'][R]>,
-                included: included as IncludedResources<I>[],
-            };
+            relationship = (await relationshipInfo.get(context, [query.ref.id]))[query.ref.id] as RelationshipValue<
+                D['relationships'][R]
+            >;
         }
+        if (query.params?.include) {
+            const [resource] = await resourceKeeper.get(context, [query.ref.id], {
+                page: query.params?.page,
+            });
+            resource.relationships[query.ref.relationship] = relationship;
+            for (const relationshipInclude of query.params.include) {
+                const includedResources = await this.#listIncludes(
+                    context,
+                    query,
+                    resource.type,
+                    [resource],
+                    relationshipInclude,
+                );
+                included.push(...includedResources);
+            }
+        }
+
+        return {
+            relationship,
+            included: included as IncludedResources<I>[],
+        };
     }
 
     async relationship<
@@ -495,21 +483,37 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
     >(
         context: C,
         query: Query<P, D, I, 'relationship', R>,
-    ): Promise<{ relationship: RelationshipValue<D['relationships'][R]>; included: IncludedResources<I>[] }> {
+    ): Promise<{
+        result: Result<
+            {
+                relationship: RelationshipValue<D['relationships'][R]>;
+                included: IncludedResources<I>[];
+            },
+            ErrorSet<CommonError>
+        >;
+        eventStore: EventStore<EventMap<C, P>>;
+    }> {
         if (!this.#initialized) {
             throw new Error('Should be initialized');
         }
+        const eventStore = this.#eventEmitter.makeStore();
         try {
             const { relationship, included } = await this.#relationship(context, query, 'query');
-            this.#eventEmitter.emit('relationship', context, query, relationship, included);
+            eventStore.add('relationship', context, query, relationship, included);
 
             return {
-                relationship,
-                included,
+                result: {
+                    ok: true,
+                    value: {
+                        relationship,
+                        included,
+                    },
+                },
+                eventStore,
             };
         } catch (error) {
             if (error instanceof ErrorSet) {
-                this.#eventEmitter.emit(
+                eventStore.add(
                     'error',
                     context,
                     {
@@ -518,6 +522,13 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                     },
                     error,
                 );
+                return {
+                    result: {
+                        ok: false,
+                        error,
+                    },
+                    eventStore,
+                };
             }
 
             throw error;
@@ -538,7 +549,7 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
             filter: this.#composeFilter(resourceKeeper, query.params?.filter as FilterFields),
             page: query.params?.page,
             sort: query.params?.sort,
-            fields: query.params?.fields?.[query.ref.type],
+            // fields: query.params?.fields?.[query.ref.type],
         });
         const included: CommonResource[] = [];
         if (query.params?.include) {
@@ -563,25 +574,41 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
     async list<D extends ResourceDeclaration, I extends ResourceDeclaration[] = []>(
         context: C,
         query: Query<P, D, I, 'list'>,
-    ): Promise<{ resources: DataList<Resource<D>>; included: IncludedResources<I>[] }> {
+    ): Promise<{
+        result: Result<
+            {
+                resources: DataList<Resource<D>>;
+                included: IncludedResources<I>[];
+            },
+            ErrorSet<CommonError>
+        >;
+        eventStore: EventStore<EventMap<C, P>>;
+    }> {
         if (!this.#initialized) {
             throw new Error('Should be initialized');
         }
+        const eventStore = this.#eventEmitter.makeStore();
         try {
             const { resources, included } = await this.#list(context, query, 'query');
-            this.#eventEmitter.emit('list', context, query, resources, included);
+            eventStore.add('list', context, query, resources, included);
 
             resources.items = resources.items.map(
                 (resource) => filterResourceFields(resource, query.params?.fields?.[resource.type]) as Resource<D>,
             );
 
             return {
-                resources,
-                included,
+                result: {
+                    ok: true,
+                    value: {
+                        resources,
+                        included,
+                    },
+                },
+                eventStore,
             };
         } catch (error) {
             if (error instanceof ErrorSet) {
-                this.#eventEmitter.emit(
+                eventStore.add(
                     'error',
                     context,
                     {
@@ -590,6 +617,13 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                     },
                     error,
                 );
+                return {
+                    result: {
+                        ok: false,
+                        error,
+                    },
+                    eventStore,
+                };
             }
 
             throw error;
@@ -680,10 +714,20 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         query: Query<P, D, I, 'list'>,
         newResource: NewResource<D>,
         pointer = new Pointer(''),
-    ): Promise<{ resource: Resource<D>; included: IncludedResources<I>[] }> {
+    ): Promise<{
+        result: Result<
+            {
+                resource: Resource<D>;
+                included: IncludedResources<I>[];
+            },
+            ErrorSet<CommonError>
+        >;
+        eventStore: EventStore<EventMap<C, P>>;
+    }> {
         if (!this.#initialized) {
             throw new Error('Should be initialized');
         }
+        const eventStore = this.#eventEmitter.makeStore();
         try {
             const resourceId = await this.#add(context, query, newResource, pointer, false);
 
@@ -692,7 +736,7 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                 params: query.params,
             });
 
-            this.#eventEmitter.emit(
+            eventStore.add(
                 'add',
                 context,
                 query,
@@ -700,15 +744,21 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                 resource!,
                 included,
             );
-            this.#eventEmitter.emit('change', context, query, null, resource);
+            eventStore.add('change', context, query, null, resource);
 
             return {
-                resource: resource!,
-                included,
+                result: {
+                    ok: true,
+                    value: {
+                        resource: resource!,
+                        included,
+                    },
+                },
+                eventStore,
             };
         } catch (error) {
             if (error instanceof ErrorSet) {
-                this.#eventEmitter.emit(
+                eventStore.add(
                     'error',
                     context,
                     {
@@ -718,6 +768,13 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                     },
                     error,
                 );
+                return {
+                    result: {
+                        ok: false,
+                        error,
+                    },
+                    eventStore,
+                };
             }
 
             throw error;
@@ -767,10 +824,20 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         query: Query<P, D, I, 'id'>,
         editableResource: EditableResource<D>,
         pointer = new Pointer(''),
-    ): Promise<{ resource: Resource<D>; included: IncludedResources<I>[] }> {
+    ): Promise<{
+        result: Result<
+            {
+                resource: Resource<D>;
+                included: IncludedResources<I>[];
+            },
+            ErrorSet<CommonError>
+        >;
+        eventStore: EventStore<EventMap<C, P>>;
+    }> {
         if (!this.#initialized) {
             throw new Error('Should be initialized');
         }
+        const eventStore = this.#eventEmitter.makeStore();
         try {
             const { resource: oldResource } = await this.#get(context, { ref: query.ref });
             await this.#update(context, query, editableResource, pointer, false);
@@ -778,7 +845,7 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
             const { resource, included } = await this.#get(context, query);
             const { resource: newResource } = await this.#get(context, { ref: query.ref });
 
-            this.#eventEmitter.emit(
+            eventStore.add(
                 'update',
                 context,
                 query,
@@ -786,15 +853,21 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                 resource!,
                 included,
             );
-            this.#eventEmitter.emit('change', context, query, oldResource, newResource);
+            eventStore.add('change', context, query, oldResource, newResource);
 
             return {
-                resource: resource!,
-                included,
+                result: {
+                    ok: true,
+                    value: {
+                        resource: resource!,
+                        included,
+                    },
+                },
+                eventStore,
             };
         } catch (error) {
             if (error instanceof ErrorSet) {
-                this.#eventEmitter.emit(
+                eventStore.add(
                     'error',
                     context,
                     {
@@ -804,6 +877,13 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                     },
                     error,
                 );
+                return {
+                    result: {
+                        ok: false,
+                        error,
+                    },
+                    eventStore,
+                };
             }
 
             throw error;
@@ -839,19 +919,31 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         context: C,
         query: Query<P, D, [], 'id'>,
         pointer = new Pointer(''),
-    ): Promise<void> {
+    ): Promise<{
+        result: Result<void, ErrorSet<CommonError>>;
+        eventStore: EventStore<EventMap<C, P>>;
+    }> {
         if (!this.#initialized) {
             throw new Error('Should be initialized');
         }
+        const eventStore = this.#eventEmitter.makeStore();
         try {
             const { resource: oldResource } = await this.#get(context, { ref: query.ref });
             await this.#remove(context, query, pointer, false);
 
-            this.#eventEmitter.emit('remove', context, query);
-            this.#eventEmitter.emit('change', context, query, oldResource, null);
+            eventStore.add('remove', context, query);
+            eventStore.add('change', context, query, oldResource, null);
+
+            return {
+                result: {
+                    ok: true,
+                    value: undefined,
+                },
+                eventStore,
+            };
         } catch (error) {
             if (error instanceof ErrorSet) {
-                this.#eventEmitter.emit(
+                eventStore.add(
                     'error',
                     context,
                     {
@@ -860,6 +952,13 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                     },
                     error,
                 );
+                return {
+                    result: {
+                        ok: false,
+                        error,
+                    },
+                    eventStore,
+                };
             }
 
             throw error;
@@ -921,24 +1020,40 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         query: Query<P, D, I, 'relationship', R>,
         resourceIdentifiers: NewRelationshipValue<D['relationships'][R], 'single'>,
         pointer = new Pointer(''),
-    ): Promise<{ relationship: RelationshipValue<D['relationships'][R]>; included: IncludedResources<I>[] }> {
+    ): Promise<{
+        result: Result<
+            {
+                relationship: RelationshipValue<D['relationships'][R]>;
+                included: IncludedResources<I>[];
+            },
+            ErrorSet<CommonError>
+        >;
+        eventStore: EventStore<EventMap<C, P>>;
+    }> {
         if (!this.#initialized) {
             throw new Error('Should be initialized');
         }
+        const eventStore = this.#eventEmitter.makeStore();
         try {
             await this.#updateRelationship(context, query, resourceIdentifiers, pointer, false);
 
             const { relationship, included } = await this.#relationship(context, query);
 
-            this.#eventEmitter.emit('update-relationship', context, query, resourceIdentifiers, relationship, included);
+            eventStore.add('update-relationship', context, query, resourceIdentifiers, relationship, included);
 
             return {
-                relationship,
-                included,
+                result: {
+                    ok: true,
+                    value: {
+                        relationship,
+                        included,
+                    },
+                },
+                eventStore,
             };
         } catch (error) {
             if (error instanceof ErrorSet) {
-                this.#eventEmitter.emit(
+                eventStore.add(
                     'error',
                     context,
                     {
@@ -948,6 +1063,13 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                     },
                     error,
                 );
+                return {
+                    result: {
+                        ok: false,
+                        error,
+                    },
+                    eventStore,
+                };
             }
 
             throw error;
@@ -1001,16 +1123,26 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         query: Query<P, D, I, 'relationship', R>,
         resourceIdentifiers: ResourceIdentifier<D['relationships'][R]['types']>[],
         pointer = new Pointer(''),
-    ): Promise<{ relationship: RelationshipValue<D['relationships'][R]>; included: IncludedResources<I>[] }> {
+    ): Promise<{
+        result: Result<
+            {
+                relationship: RelationshipValue<D['relationships'][R]>;
+                included: IncludedResources<I>[];
+            },
+            ErrorSet<CommonError>
+        >;
+        eventStore: EventStore<EventMap<C, P>>;
+    }> {
         if (!this.#initialized) {
             throw new Error('Should be initialized');
         }
+        const eventStore = this.#eventEmitter.makeStore();
         try {
             await this.#addRelationships(context, query, resourceIdentifiers, pointer, false);
 
             const { relationship, included } = await this.#relationship(context, query);
 
-            this.#eventEmitter.emit(
+            eventStore.add(
                 'add-relationship',
                 context,
                 query,
@@ -1020,12 +1152,18 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
             );
 
             return {
-                relationship,
-                included,
+                result: {
+                    ok: true,
+                    value: {
+                        relationship,
+                        included,
+                    },
+                },
+                eventStore,
             };
         } catch (error) {
             if (error instanceof ErrorSet) {
-                this.#eventEmitter.emit(
+                eventStore.add(
                     'error',
                     context,
                     {
@@ -1035,6 +1173,13 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                     },
                     error,
                 );
+                return {
+                    result: {
+                        ok: false,
+                        error,
+                    },
+                    eventStore,
+                };
             }
 
             throw error;
@@ -1085,16 +1230,26 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         query: Query<P, D, I, 'relationship', R>,
         resourceIdentifiers: ResourceIdentifier<D['relationships'][R]['types']>[],
         pointer = new Pointer(''),
-    ): Promise<{ relationship: RelationshipValue<D['relationships'][R]>; included: IncludedResources<I>[] }> {
+    ): Promise<{
+        result: Result<
+            {
+                relationship: RelationshipValue<D['relationships'][R]>;
+                included: IncludedResources<I>[];
+            },
+            ErrorSet<CommonError>
+        >;
+        eventStore: EventStore<EventMap<C, P>>;
+    }> {
         if (!this.#initialized) {
             throw new Error('Should be initialized');
         }
+        const eventStore = this.#eventEmitter.makeStore();
         try {
             await this.#removeRelationships(context, query, resourceIdentifiers, pointer, false);
 
             const { relationship, included } = await this.#relationship(context, query);
 
-            this.#eventEmitter.emit(
+            eventStore.add(
                 'remove-relationship',
                 context,
                 query,
@@ -1104,12 +1259,18 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
             );
 
             return {
-                relationship,
-                included,
+                result: {
+                    ok: true,
+                    value: {
+                        relationship,
+                        included,
+                    },
+                },
+                eventStore,
             };
         } catch (error) {
             if (error instanceof ErrorSet) {
-                this.#eventEmitter.emit(
+                eventStore.add(
                     'error',
                     context,
                     {
@@ -1119,6 +1280,13 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                     },
                     error,
                 );
+                return {
+                    result: {
+                        ok: false,
+                        error,
+                    },
+                    eventStore,
+                };
             }
 
             throw error;
@@ -1165,12 +1333,16 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         context: C,
         operations: OA,
         pointer = new Pointer(''),
-    ): Promise<OperationResults<OA>> {
+    ): Promise<{
+        result: Result<OperationResults<OA>, ErrorSet<CommonError>>;
+        eventStore: EventStore<EventMap<C, P>>;
+    }> {
         if (!this.#initialized) {
             throw new Error('Should be initialized');
         }
         const lidMap = new Map<string, string>();
         const errorSet = new ErrorSet<CommonError>();
+        const eventStore = this.#eventEmitter.makeStore();
         for (let i = 0; i < operations.length; i++) {
             const operation = operations[i];
             if (operation.op === 'add' && 'lid' in operation.data && operation.data.lid) {
@@ -1219,11 +1391,16 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
             }
         }
         if (errorSet.errors.length) {
-            throw errorSet;
+            return {
+                result: {
+                    ok: false,
+                    error: errorSet,
+                },
+                eventStore,
+            };
         }
 
         const results: OperationResults<OA> = [] as OperationResults<OA>;
-        const events: EventList<EventMap<C, P>>[] = [];
         try {
             for (let i = 0; i < operations.length; i++) {
                 const operation = operations[i];
@@ -1261,8 +1438,8 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
 
                     results.push(resource!);
 
-                    events.push(['add', context, query, newResource, resource!, []]);
-                    events.push(['change', context, query, null, resource]);
+                    eventStore.add('add', context, query, newResource, resource!, []);
+                    eventStore.add('change', context, query, null, resource);
                 } else if (operation.op === 'update') {
                     const editableResource: EditableResource<ResourceDeclaration> = {
                         type: operation.data.type,
@@ -1290,8 +1467,8 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
 
                     results.push(resource!);
 
-                    events.push(['update', context, query, editableResource, resource!, []]);
-                    events.push(['change', context, query, oldResource, resource]);
+                    eventStore.add('update', context, query, editableResource, resource!, []);
+                    eventStore.add('change', context, query, oldResource, resource);
                 } else if (operation.op === 'remove') {
                     const query: Query<P, ResourceDeclaration, [], 'id'> = {
                         ref: {
@@ -1304,8 +1481,8 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
 
                     results.push(query.ref.id);
 
-                    events.push(['remove', context, query]);
-                    events.push(['change', context, query, oldResource, null]);
+                    eventStore.add('remove', context, query);
+                    eventStore.add('change', context, query, oldResource, null);
                 } else if (operation.op === 'add-relationships') {
                     const query: Query<P, ResourceDeclaration, [], 'relationship'> = {
                         ref: {
@@ -1325,14 +1502,14 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
 
                     results.push([query.ref.id, relationship]);
 
-                    events.push([
+                    eventStore.add(
                         'add-relationship',
                         context,
                         query,
                         resourceIdentifiers,
                         relationship as DataList<ResourceIdentifier<string>>,
                         [],
-                    ]);
+                    );
                 } else if (operation.op === 'update-relationships') {
                     const query: Query<P, ResourceDeclaration, [], 'relationship'> = {
                         ref: {
@@ -1358,7 +1535,7 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
 
                     results.push([query.ref.id, relationship]);
 
-                    events.push(['update-relationship', context, query, resourceIdentifiers, relationship, []]);
+                    eventStore.add('update-relationship', context, query, resourceIdentifiers, relationship, []);
                 } else if (operation.op === 'remove-relationships') {
                     const query: Query<P, ResourceDeclaration, [], 'relationship'> = {
                         ref: {
@@ -1378,19 +1555,19 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
 
                     results.push([query.ref.id, relationship]);
 
-                    events.push([
+                    eventStore.add(
                         'remove-relationship',
                         context,
                         query,
                         resourceIdentifiers,
                         relationship as DataList<ResourceIdentifier<string>>,
                         [],
-                    ]);
+                    );
                 }
             }
-        } catch (errors) {
-            if (errors instanceof ErrorSet) {
-                this.#eventEmitter.emit(
+        } catch (error) {
+            if (error instanceof ErrorSet) {
+                eventStore.add(
                     'error',
                     context,
                     {
@@ -1400,24 +1577,34 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                         finished: results.length,
                         finishedResults: results as OperationResults<Operation<ResourceDeclaration>[]>,
                     },
-                    errors,
+                    error,
                 );
+                return {
+                    result: {
+                        ok: false,
+                        error,
+                    },
+                    eventStore,
+                };
             }
 
-            throw errors;
+            throw error;
         }
 
-        for (const event of events) {
-            this.#eventEmitter.emit(...event);
-        }
-        this.#eventEmitter.emit(
+        eventStore.add(
             'operations',
             context,
             operations as Operation<ResourceDeclaration>[],
             results as OperationResults<Operation<ResourceDeclaration>[]>,
         );
 
-        return results;
+        return {
+            result: {
+                ok: true,
+                value: results,
+            },
+            eventStore,
+        };
     }
 
     #checkResourceStatus(context: C, type: string, id: string): Promise<ResourceStatus> {
@@ -1510,6 +1697,10 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
             errors.push(...existingErrors);
         }
         return errors;
+    }
+
+    makeStore(): EventStore<EventMap<C, P>> {
+        return this.#eventEmitter.makeStore();
     }
 
     // think about create new

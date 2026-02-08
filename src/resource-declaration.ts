@@ -61,18 +61,18 @@ export type ResourceDeclaration = {
     addable: boolean;
     updatable: boolean;
     removable: boolean;
-} & (
-    | {
-          listable: false;
-          filter: Record<string, never>;
-          sort: Record<string, never>;
-      }
-    | {
-          listable: true;
-          filter: FilterDeclarations;
-          sort: SortDeclarations;
-      }
-);
+    listable:
+        | {
+              status: false;
+              filter: Record<string, never>;
+              sort: Record<string, never>;
+          }
+        | {
+              status: true;
+              filter: FilterDeclarations;
+              sort: SortDeclarations;
+          };
+};
 
 type ReadonlyKeys<T extends Record<string, { mode: 'readonly' } | unknown>> = ModeKeys<'readonly', T>;
 type UnchangeableKeys<T extends Record<string, { mode: 'unchangeable' } | unknown>> = ModeKeys<'unchangeable', T>;
@@ -233,6 +233,10 @@ export type SingleRelationshipTypes<D extends ResourceDeclaration> = D['relation
     keyof D['relationships'],
     MultipleKeys<D>
 >]['types'];
+export type MultipleRelationshipKeys<D extends ResourceDeclaration> = keyof FilterRecord<
+    D['relationships'],
+    { multiple: true }
+>;
 
 export type IncludedResources<I extends ResourceDeclaration[]> = I extends [infer F, ...infer R]
     ? F extends ResourceDeclaration

@@ -52,7 +52,8 @@ describe('ResourceManager', () => {
 
             resourceManager.on('error', handleError);
 
-            assert.rejects(() => resourceManager.get(context, { ref: { type: 'passwords', id: '1' } }));
+            const { eventStore } = await resourceManager.get(context, { ref: { type: 'passwords', id: '1' } });
+            eventStore.emit();
         });
 
         test('should call get event', async () => {
@@ -142,7 +143,11 @@ describe('ResourceManager', () => {
 
             resourceManager.on('get', handleGet);
 
-            await resourceManager.get(context, { ref: { type: 'notes', id: '12' }, params: { include: [['author']] } });
+            const { eventStore } = await resourceManager.get(context, {
+                ref: { type: 'notes', id: '12' },
+                params: { include: [['author']] },
+            });
+            eventStore.emit();
         });
 
         test('should call list event', async () => {
@@ -266,7 +271,11 @@ describe('ResourceManager', () => {
 
             resourceManager.on('list', handleList);
 
-            await resourceManager.list(context, { ref: { type: 'notes' }, params: { include: [['author']] } });
+            const { eventStore } = await resourceManager.list(context, {
+                ref: { type: 'notes' },
+                params: { include: [['author']] },
+            });
+            eventStore.emit();
         });
 
         test('should call relationship event', async () => {
@@ -318,7 +327,10 @@ describe('ResourceManager', () => {
 
             resourceManager.on('relationship', handleRelationship);
 
-            await resourceManager.relationship(context, { ref: { type: 'notes', id: '12', relationship: 'tags' } });
+            const { eventStore } = await resourceManager.relationship(context, {
+                ref: { type: 'notes', id: '12', relationship: 'tags' },
+            });
+            eventStore.emit();
         });
     });
 
@@ -428,7 +440,7 @@ describe('ResourceManager', () => {
         resourceManager.on('add', handleAdd);
         resourceManager.on('change', handleChange);
 
-        await resourceManager.add<NoteDeclaration>(
+        const { eventStore } = await resourceManager.add<NoteDeclaration>(
             context,
             { ref: { type: 'notes' } },
             {
@@ -441,6 +453,7 @@ describe('ResourceManager', () => {
                 },
             },
         );
+        eventStore.emit();
     });
 
     test('should call update and change events', async () => {
@@ -611,7 +624,7 @@ describe('ResourceManager', () => {
         resourceManager.on('update', handleUpdate);
         resourceManager.on('change', handleChange);
 
-        await resourceManager.update<NoteDeclaration>(
+        const { eventStore } = await resourceManager.update<NoteDeclaration>(
             context,
             { ref: { type: 'notes', id: '12' } },
             {
@@ -625,6 +638,7 @@ describe('ResourceManager', () => {
                 },
             },
         );
+        eventStore.emit();
     });
 
     test('should call remove and change events', async () => {
@@ -711,7 +725,10 @@ describe('ResourceManager', () => {
         resourceManager.on('remove', handleRemove);
         resourceManager.on('change', handleChange);
 
-        await resourceManager.remove<NoteDeclaration>(context, { ref: { type: 'notes', id: '12' } });
+        const { eventStore } = await resourceManager.remove<NoteDeclaration>(context, {
+            ref: { type: 'notes', id: '12' },
+        });
+        eventStore.emit();
     });
 
     test('should call add-relationship event', async () => {
@@ -774,7 +791,7 @@ describe('ResourceManager', () => {
 
         resourceManager.on('add-relationship', handleAddRelationship);
 
-        await resourceManager.addRelationships<NoteDeclaration, 'tags'>(
+        const { eventStore } = await resourceManager.addRelationships<NoteDeclaration, 'tags'>(
             context,
             { ref: { type: 'notes', id: '12', relationship: 'tags' } },
             [
@@ -784,6 +801,7 @@ describe('ResourceManager', () => {
                 },
             ],
         );
+        eventStore.emit();
     });
 
     test('should call update-relationship event', async () => {
@@ -834,7 +852,7 @@ describe('ResourceManager', () => {
 
         resourceManager.on('update-relationship', handleUpdateRelationship);
 
-        await resourceManager.updateRelationship<NoteDeclaration, 'tags'>(
+        const { eventStore } = await resourceManager.updateRelationship<NoteDeclaration, 'tags'>(
             context,
             { ref: { type: 'notes', id: '12', relationship: 'tags' } },
             [
@@ -844,6 +862,7 @@ describe('ResourceManager', () => {
                 },
             ],
         );
+        eventStore.emit();
     });
 
     test('should call remove-relationship event', async () => {
@@ -898,7 +917,7 @@ describe('ResourceManager', () => {
 
         resourceManager.on('remove-relationship', handleRemoveRelationship);
 
-        await resourceManager.removeRelationships<NoteDeclaration, 'tags'>(
+        const { eventStore } = await resourceManager.removeRelationships<NoteDeclaration, 'tags'>(
             context,
             { ref: { type: 'notes', id: '12', relationship: 'tags' } },
             [
@@ -908,6 +927,7 @@ describe('ResourceManager', () => {
                 },
             ],
         );
+        eventStore.emit();
     });
 
     test('should call operations event', async () => {
@@ -1170,35 +1190,30 @@ describe('ResourceManager', () => {
         resourceManager.on('add', handleAdd);
         resourceManager.on('change', handleChange);
 
-        await resourceManager.operations(context, [
+        const { eventStore } = await resourceManager.operations(context, [
             operation.add<NoteDeclaration>({
-                op: 'add',
-                data: {
-                    type: 'notes',
-                    lid: 'new-note',
-                    attributes: {
-                        title: 'New Note',
-                    },
-                    relationships: {
-                        tags: [],
-                    },
+                type: 'notes',
+                lid: 'new-note',
+                attributes: {
+                    title: 'New Note',
+                },
+                relationships: {
+                    tags: [],
                 },
             }),
             operation.add<TagDeclaration>({
-                op: 'add',
-                data: {
-                    type: 'tags',
-                    attributes: {
-                        name: 'new one',
-                    },
-                    relationships: {
-                        note: {
-                            type: 'notes',
-                            lid: 'new-note',
-                        },
+                type: 'tags',
+                attributes: {
+                    name: 'new one',
+                },
+                relationships: {
+                    note: {
+                        type: 'notes',
+                        lid: 'new-note',
                     },
                 },
             }),
         ]);
+        eventStore.emit();
     });
 });

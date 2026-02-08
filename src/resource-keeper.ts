@@ -4,7 +4,7 @@ import {
     Resource,
     EditableResource,
     Attributes,
-    Relationships,
+    // Relationships,
     RelationshipValue,
 } from './resource-declaration';
 import { ResourceSchema } from './resource-schema';
@@ -13,13 +13,13 @@ import { DataList, UntypedKeys } from './types';
 export interface ResourceOptions<D extends ResourceDeclaration, P> {
     page?: P;
     filter?: {
-        [K in keyof D['filter']]?: D['filter'][K]['type'];
+        [K in keyof D['listable']['filter']]?: D['listable']['filter'][K]['type'];
     };
     sort?: {
-        field: keyof D['sort'];
+        field: keyof D['listable']['sort'];
         asc: boolean;
     }[];
-    fields?: (keyof Attributes<D> | keyof Relationships<D>)[];
+    // fields?: (keyof Attributes<D> | keyof Relationships<D>)[];
 }
 
 export type ResourceStatus =
@@ -38,16 +38,12 @@ export abstract class ResourceKeeper<D extends ResourceDeclaration, C, P> {
     abstract readonly schema: ResourceSchema<D, C, P>;
 
     abstract status(context: C, ids: string[]): Promise<Record<string, ResourceStatus>>;
-    abstract get(
-        context: C,
-        ids: string[],
-        options: Pick<ResourceOptions<D, P>, 'fields' | 'page'>,
-    ): Promise<Resource<D>[]>;
+    abstract get(context: C, ids: string[], options: Pick<ResourceOptions<D, P>, 'page'>): Promise<Resource<D>[]>;
 
     abstract list(
         context: C,
         options: ResourceOptions<D, P>,
-    ): Promise<D extends { listable: true } ? DataList<Resource<D>> : never>;
+    ): Promise<D['listable'] extends { status: true } ? DataList<Resource<D>> : never>;
 
     abstract add(context: C, resource: NewResource<D>): Promise<D extends { addable: true } ? string : never>;
 
@@ -70,11 +66,7 @@ export abstract class FetchableResourceKeeper<D extends ResourceDeclaration, C, 
 
     abstract status(context: C, ids: string[]): Promise<Record<string, ResourceStatus>>;
 
-    async get(
-        context: C,
-        ids: string[],
-        options: Pick<ResourceOptions<D, P>, 'fields' | 'page'>,
-    ): Promise<Resource<D>[]> {
+    async get(context: C, ids: string[], options: Pick<ResourceOptions<D, P>, 'page'>): Promise<Resource<D>[]> {
         const resources = await this.getBase(context, ids, options);
         const multipleRelationshipFields = Object.keys(this.schema.relationships).filter(
             (field) => this.schema.relationships[field].multiple,
@@ -93,19 +85,19 @@ export abstract class FetchableResourceKeeper<D extends ResourceDeclaration, C, 
             }
         }
 
-        return resources as unknown as D extends { getable: true } ? Resource<D>[] : never;
+        return resources as unknown as Resource<D>[];
     }
 
     abstract getBase(
         context: C,
         ids: string[],
-        options: Pick<ResourceOptions<D, P>, 'fields' | 'page'>,
+        options: Pick<ResourceOptions<D, P>, 'page'>,
     ): Promise<ResourceWithSingleRelationships<D>[]>;
 
     abstract list(
         context: C,
         options: ResourceOptions<D, P>,
-    ): Promise<D extends { listable: true } ? DataList<Resource<D>> : never>;
+    ): Promise<D['listable'] extends { status: true } ? DataList<Resource<D>> : never>;
 
     abstract add(context: C, resource: NewResource<D>): Promise<D extends { addable: true } ? string : never>;
 
@@ -122,7 +114,7 @@ export abstract class ListableResourceKeeper<
     async list(
         context: C,
         options: ResourceOptions<D, P>,
-    ): Promise<D extends { listable: true } ? DataList<Resource<D>> : never> {
+    ): Promise<D['listable'] extends { status: true } ? DataList<Resource<D>> : never> {
         const idList = await this.listIds(context, options);
         const resources = (await this.get(context, idList.items, options)) as unknown as Resource<D>;
 
@@ -131,7 +123,7 @@ export abstract class ListableResourceKeeper<
             offset: idList.offset,
             total: idList.total,
             limit: idList.limit,
-        } as unknown as D extends { listable: true } ? DataList<Resource<D>> : never;
+        } as unknown as D['listable'] extends { status: true } ? DataList<Resource<D>> : never;
     }
 
     abstract listIds(context: C, options: ResourceOptions<D, P>): Promise<DataList<string>>;
