@@ -1,6 +1,6 @@
 {
   "name": "@sio/jsonapi",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Simple implementation of JSONAPI server",
   "types": "dist/types",
   "main": "dist/cjs/index.js",
@@ -49,7 +49,7 @@
     "Typescript"
   ],
   "devDependencies": {
-    "@types/node": "^20.9.0",
+    "@types/node": "^24.10.0",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
     "@typescript-eslint/parser": "^6.10.0",
     "eslint": "^8.53.0",
@@ -76,7 +76,7 @@
     "dist"
   ],
   "dependencies": {
-    "@just-io/schema": "^3.0.2",
-    "@just-io/utils": "^2.0.0"
+    "@just-io/schema": "^5.0.1",
+    "@just-io/utils": "^2.0.2"
   }
 }

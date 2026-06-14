@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { Context, makeResourceManager, NoteDeclaration, TagDeclaration, UserDeclaration } from '../prepare';
+import { Context, makeResourceManager, NoteDeclaration, TagDeclaration, UserDeclaration } from '../../prepare';
 
 describe('ResourceManager', () => {
     describe('unavailable cases', () => {
@@ -26,18 +26,16 @@ describe('ResourceManager', () => {
                     },
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: "The resource with type 'passwords' is not existed.",
-                            source: {
-                                parameter: 'query',
-                            },
-                            status: 404,
-                            title: 'Invalid Resource Type',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'The resource with type "passwords" is not existed.',
+                        source: {
+                            parameter: 'query',
                         },
-                    ],
-                });
+                        status: 404,
+                        title: 'Invalid Resource Type',
+                    },
+                ]);
             });
 
             test('should return error on add user', async () => {
@@ -53,18 +51,16 @@ describe('ResourceManager', () => {
                     },
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: "The method 'post' is not allowed.",
-                            source: {
-                                parameter: 'method',
-                            },
-                            status: 405,
-                            title: 'Method Not Allowed',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'The method "post" is not allowed.',
+                        source: {
+                            parameter: 'method',
                         },
-                    ],
-                });
+                        status: 405,
+                        title: 'Method Not Allowed',
+                    },
+                ]);
             });
         });
 
@@ -90,18 +86,16 @@ describe('ResourceManager', () => {
                     },
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: "The resource with type 'passwords' is not existed.",
-                            source: {
-                                parameter: 'query',
-                            },
-                            status: 404,
-                            title: 'Invalid Resource Type',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'The resource with type "passwords" is not existed.',
+                        source: {
+                            parameter: 'query',
                         },
-                    ],
-                });
+                        status: 404,
+                        title: 'Invalid Resource Type',
+                    },
+                ]);
             });
 
             test('should return error on update user', async () => {
@@ -118,18 +112,16 @@ describe('ResourceManager', () => {
                     },
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: "The method 'patch' is not allowed.",
-                            source: {
-                                parameter: 'method',
-                            },
-                            status: 405,
-                            title: 'Method Not Allowed',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'The method "patch" is not allowed.',
+                        source: {
+                            parameter: 'method',
                         },
-                    ],
-                });
+                        status: 405,
+                        title: 'Method Not Allowed',
+                    },
+                ]);
             });
         });
 
@@ -146,18 +138,16 @@ describe('ResourceManager', () => {
                     ref: { type: 'passwords', id: '12' },
                 });
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: "The resource with type 'passwords' is not existed.",
-                            source: {
-                                parameter: 'query',
-                            },
-                            status: 404,
-                            title: 'Invalid Resource Type',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'The resource with type "passwords" is not existed.',
+                        source: {
+                            parameter: 'query',
                         },
-                    ],
-                });
+                        status: 404,
+                        title: 'Invalid Resource Type',
+                    },
+                ]);
             });
 
             test('should return error of remove user', async () => {
@@ -165,18 +155,16 @@ describe('ResourceManager', () => {
                     ref: { type: 'users', id: '12' },
                 });
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: "The method 'delete' is not allowed.",
-                            source: {
-                                parameter: 'method',
-                            },
-                            status: 405,
-                            title: 'Method Not Allowed',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'The method "delete" is not allowed.',
+                        source: {
+                            parameter: 'method',
                         },
-                    ],
-                });
+                        status: 405,
+                        title: 'Method Not Allowed',
+                    },
+                ]);
             });
         });
     });
@@ -211,18 +199,16 @@ describe('ResourceManager', () => {
                     },
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: undefined,
-                            source: {
-                                pointer: '/relationships/author/id',
-                            },
-                            status: 403,
-                            title: 'Forbidden',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: undefined,
+                        source: {
+                            pointer: '/relationships/author/id',
                         },
-                    ],
-                });
+                        status: 403,
+                        title: 'Forbidden',
+                    },
+                ]);
             });
 
             test('should return error of add note to not found user', async () => {
@@ -246,18 +232,16 @@ describe('ResourceManager', () => {
                     },
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: undefined,
-                            source: {
-                                pointer: '/relationships/author/id',
-                            },
-                            status: 404,
-                            title: 'Not found',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: undefined,
+                        source: {
+                            pointer: '/relationships/author/id',
                         },
-                    ],
-                });
+                        status: 404,
+                        title: 'Not Found',
+                    },
+                ]);
             });
 
             test('should return error of add note to invalid attribute', async () => {
@@ -275,6 +259,9 @@ describe('ResourceManager', () => {
                             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                             // @ts-expect-error
                             links: ['href:', 12],
+                            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                            // @ts-expect-error
+                            version: 2,
                         },
                         relationships: {
                             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -290,26 +277,32 @@ describe('ResourceManager', () => {
                     },
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: 'Should be "string" type.',
-                            source: {
-                                pointer: '/attributes/title',
-                            },
-                            status: 400,
-                            title: 'Invalid Field',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'Should be "string" type.',
+                        source: {
+                            pointer: '/attributes/title',
                         },
-                        {
-                            detail: 'Should be "string" type.',
-                            source: {
-                                pointer: '/attributes/links/1',
-                            },
-                            status: 400,
-                            title: 'Invalid Field',
+                        status: 400,
+                        title: 'Invalid Resource Field',
+                    },
+                    {
+                        detail: 'Should be "string" type.',
+                        source: {
+                            pointer: '/attributes/links/1',
                         },
-                    ],
-                });
+                        status: 400,
+                        title: 'Invalid Resource Field',
+                    },
+                    {
+                        detail: 'The resource with type "notes" does not have field "version".',
+                        source: {
+                            pointer: '/attributes/version',
+                        },
+                        status: 400,
+                        title: 'Invalid Resource Field',
+                    },
+                ]);
             });
 
             test('should add note to user', async () => {
@@ -394,18 +387,16 @@ describe('ResourceManager', () => {
                     },
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: undefined,
-                            source: {
-                                parameter: 'query',
-                            },
-                            status: 403,
-                            title: 'Forbidden',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: undefined,
+                        source: {
+                            parameter: 'query',
                         },
-                    ],
-                });
+                        status: 403,
+                        title: 'Forbidden',
+                    },
+                ]);
             });
 
             test('should return error of update note of not equal id', async () => {
@@ -424,18 +415,16 @@ describe('ResourceManager', () => {
                     },
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: 'The resource with id does not equal query id.',
-                            source: {
-                                pointer: '/id',
-                            },
-                            status: 400,
-                            title: 'Invalid Resource Id',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'The resource with "id" does not equal query "id".',
+                        source: {
+                            pointer: '/id',
                         },
-                    ],
-                });
+                        status: 400,
+                        title: 'Invalid Resource Id',
+                    },
+                ]);
             });
 
             test('should return error of update not found note', async () => {
@@ -454,18 +443,16 @@ describe('ResourceManager', () => {
                     },
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: undefined,
-                            source: {
-                                parameter: 'query',
-                            },
-                            status: 404,
-                            title: 'Not found',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: undefined,
+                        source: {
+                            parameter: 'query',
                         },
-                    ],
-                });
+                        status: 404,
+                        title: 'Not Found',
+                    },
+                ]);
             });
 
             test('should update note of user', async () => {
@@ -547,18 +534,16 @@ describe('ResourceManager', () => {
                     ref: { type: 'notes', id: '14' },
                 });
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: undefined,
-                            source: {
-                                parameter: 'query',
-                            },
-                            status: 403,
-                            title: 'Forbidden',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: undefined,
+                        source: {
+                            parameter: 'query',
                         },
-                    ],
-                });
+                        status: 403,
+                        title: 'Forbidden',
+                    },
+                ]);
             });
 
             test('should return error of remove not found note', async () => {
@@ -566,18 +551,16 @@ describe('ResourceManager', () => {
                     ref: { type: 'notes', id: '10' },
                 });
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: undefined,
-                            source: {
-                                parameter: 'query',
-                            },
-                            status: 404,
-                            title: 'Not found',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: undefined,
+                        source: {
+                            parameter: 'query',
                         },
-                    ],
-                });
+                        status: 404,
+                        title: 'Not Found',
+                    },
+                ]);
             });
 
             test('should remove note of user', async () => {
@@ -609,18 +592,16 @@ describe('ResourceManager', () => {
                     },
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: 'Resource with id "14" is forbidden.',
-                            source: {
-                                pointer: '/id',
-                            },
-                            status: 403,
-                            title: 'Forbidden',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'Resource with id "14" is forbidden.',
+                        source: {
+                            pointer: '/id',
                         },
-                    ],
-                });
+                        status: 403,
+                        title: 'Forbidden',
+                    },
+                ]);
             });
 
             test('should return error of update tag of not found user', async () => {
@@ -635,18 +616,16 @@ describe('ResourceManager', () => {
                     },
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: 'Resource with id "10" doesn\'t exist.',
-                            source: {
-                                pointer: '/id',
-                            },
-                            status: 404,
-                            title: 'Not found',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'Resource with id "10" doesn\'t exist.',
+                        source: {
+                            pointer: '/id',
                         },
-                    ],
-                });
+                        status: 404,
+                        title: 'Not Found',
+                    },
+                ]);
             });
 
             test('should update tag', async () => {
@@ -697,18 +676,16 @@ describe('ResourceManager', () => {
                     ],
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: 'Resource with id "27" is forbidden.',
-                            source: {
-                                pointer: '/0/id',
-                            },
-                            status: 403,
-                            title: 'Forbidden',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'Resource with id "27" is forbidden.',
+                        source: {
+                            pointer: '/0/id',
                         },
-                    ],
-                });
+                        status: 403,
+                        title: 'Forbidden',
+                    },
+                ]);
             });
 
             test('should return error of add not existing tag', async () => {
@@ -725,18 +702,16 @@ describe('ResourceManager', () => {
                     ],
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: 'Resource with id "28" doesn\'t exist.',
-                            source: {
-                                pointer: '/0/id',
-                            },
-                            status: 404,
-                            title: 'Not found',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'Resource with id "28" doesn\'t exist.',
+                        source: {
+                            pointer: '/0/id',
                         },
-                    ],
-                });
+                        status: 404,
+                        title: 'Not Found',
+                    },
+                ]);
             });
 
             test('should add tag', async () => {
@@ -808,18 +783,16 @@ describe('ResourceManager', () => {
                     ],
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: 'Resource with id "27" is forbidden.',
-                            source: {
-                                pointer: '/0/id',
-                            },
-                            status: 403,
-                            title: 'Forbidden',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'Resource with id "27" is forbidden.',
+                        source: {
+                            pointer: '/0/id',
                         },
-                    ],
-                });
+                        status: 403,
+                        title: 'Forbidden',
+                    },
+                ]);
             });
 
             test('should remove unexisting tag', async () => {
@@ -916,18 +889,16 @@ describe('ResourceManager', () => {
                     ],
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: 'Resource with id "27" is forbidden.',
-                            source: {
-                                pointer: '/0/id',
-                            },
-                            status: 403,
-                            title: 'Forbidden',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'Resource with id "27" is forbidden.',
+                        source: {
+                            pointer: '/0/id',
                         },
-                    ],
-                });
+                        status: 403,
+                        title: 'Forbidden',
+                    },
+                ]);
             });
 
             test('should return error of updating not existing tag', async () => {
@@ -944,18 +915,16 @@ describe('ResourceManager', () => {
                     ],
                 );
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: 'Resource with id "28" doesn\'t exist.',
-                            source: {
-                                pointer: '/0/id',
-                            },
-                            status: 404,
-                            title: 'Not found',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: 'Resource with id "28" doesn\'t exist.',
+                        source: {
+                            pointer: '/0/id',
                         },
-                    ],
-                });
+                        status: 404,
+                        title: 'Not Found',
+                    },
+                ]);
             });
 
             test('should update tags', async () => {

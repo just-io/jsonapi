@@ -1,13 +1,5 @@
 import { QueryConverter } from './query-converter';
-import {
-    ResourceIdentifier,
-    DataList,
-    PageProvider,
-    CommonResourceRelationship,
-    MetaProvider,
-    CommonQueryRef,
-    Query,
-} from '../types/common';
+import { ResourceIdentifier, DataList, CommonResourceRelationship, CommonQueryRef, Query } from '../types/common';
 import { CommonResource, ResourceDeclaration } from '../types/resource-declaration';
 import { filterResourceFields } from './utils';
 import {
@@ -20,6 +12,7 @@ import {
     RelationshipsPresenter,
     ResourcePresenter,
 } from '../types/formats';
+import { MetaProvider, PageProvider } from './types';
 
 export class Formatter<P, M> {
     #pageProvider: PageProvider<P>;
@@ -39,11 +32,7 @@ export class Formatter<P, M> {
         total: number,
         limit: number,
     ): Pick<FetchResponseResourcesData<M, D, I>['links'], 'first' | 'last' | 'next' | 'prev'> {
-        const pages = this.#pageProvider.getPages(
-            query.params?.page ?? this.#pageProvider.extractFromEntries([]),
-            total,
-            limit,
-        );
+        const pages = this.#pageProvider.getPages(query.params?.page ?? this.#pageProvider.makeDefault(), total, limit);
 
         return {
             first:

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { Context, makeResourceManager, NoteDeclaration, UserDeclaration } from '../prepare';
+import { Context, makeResourceManager, NoteDeclaration, UserDeclaration } from '../../prepare';
 
 describe('ResourceManager', () => {
     const resourceManager = makeResourceManager();
@@ -14,18 +14,16 @@ describe('ResourceManager', () => {
             },
         );
         assert.ok(result.ok === false);
-        assert.deepStrictEqual(result.error.toJSON(), {
-            errors: [
-                {
-                    detail: "The resource with type 'passwords' is not existed.",
-                    source: {
-                        parameter: 'query',
-                    },
-                    status: 404,
-                    title: 'Invalid Resource Type',
+        assert.deepStrictEqual(result.error.toJSON(), [
+            {
+                detail: 'The resource with type "passwords" is not existed.',
+                source: {
+                    parameter: 'query',
                 },
-            ],
-        });
+                status: 404,
+                title: 'Invalid Resource Type',
+            },
+        ]);
     });
 
     describe('with admin context', () => {
@@ -223,18 +221,16 @@ describe('ResourceManager', () => {
                         },
                     });
                     assert.ok(result.ok === false);
-                    assert.deepStrictEqual(result.error.toJSON(), {
-                        errors: [
-                            {
-                                detail: 'Filtering by field "filter[id]" does not support in type "users"',
-                                source: {
-                                    parameter: 'filter',
-                                },
-                                status: 400,
-                                title: 'Invalid Query Parameter',
+                    assert.deepStrictEqual(result.error.toJSON(), [
+                        {
+                            detail: 'Filtering by field "filter[id]" does not support in type "users"',
+                            source: {
+                                parameter: 'filter',
                             },
-                        ],
-                    });
+                            status: 400,
+                            title: 'Invalid Query Parameter',
+                        },
+                    ]);
                 });
             });
 
@@ -317,26 +313,32 @@ describe('ResourceManager', () => {
                         },
                     });
                     assert.ok(result.ok === false);
-                    assert.deepStrictEqual(result.error.toJSON(), {
-                        errors: [
-                            {
-                                detail: 'Should be more than or equal 0.',
-                                source: {
-                                    parameter: 'page',
-                                },
-                                status: 400,
-                                title: 'Invalid Query Parameter',
+                    assert.deepStrictEqual(result.error.toJSON(), [
+                        {
+                            detail: 'Should be more than or equal 0.',
+                            source: {
+                                parameter: 'page',
                             },
-                            {
-                                detail: 'Should be more than or equal 1.',
-                                source: {
-                                    parameter: 'page',
-                                },
-                                status: 400,
-                                title: 'Invalid Query Parameter',
+                            status: 400,
+                            title: 'Invalid Query Parameter',
+                        },
+                        {
+                            detail: 'Should be more than or equal 1.',
+                            source: {
+                                parameter: 'page',
                             },
-                        ],
-                    });
+                            status: 400,
+                            title: 'Invalid Query Parameter',
+                        },
+                        {
+                            detail: 'Should be integer value.',
+                            source: {
+                                parameter: 'page',
+                            },
+                            status: 400,
+                            title: 'Invalid Query Parameter',
+                        },
+                    ]);
                 });
             });
 
@@ -400,18 +402,16 @@ describe('ResourceManager', () => {
                         },
                     });
                     assert.ok(result.ok === false);
-                    assert.deepStrictEqual(result.error.toJSON(), {
-                        errors: [
-                            {
-                                detail: 'Sorting by field "name" does not support in type "users"',
-                                source: {
-                                    parameter: 'sort',
-                                },
-                                status: 400,
-                                title: 'Invalid Query Parameter',
+                    assert.deepStrictEqual(result.error.toJSON(), [
+                        {
+                            detail: 'Sorting by field "name" does not support in type "users"',
+                            source: {
+                                parameter: 'sort',
                             },
-                        ],
-                    });
+                            status: 400,
+                            title: 'Invalid Query Parameter',
+                        },
+                    ]);
                 });
             });
 
@@ -450,18 +450,16 @@ describe('ResourceManager', () => {
                         ref: { type: 'users', id: '11', relationship: 'note' },
                     });
                     assert.ok(result.ok === false);
-                    assert.deepStrictEqual(result.error.toJSON(), {
-                        errors: [
-                            {
-                                detail: undefined,
-                                source: {
-                                    parameter: 'query',
-                                },
-                                status: 404,
-                                title: 'Not found',
+                    assert.deepStrictEqual(result.error.toJSON(), [
+                        {
+                            detail: undefined,
+                            source: {
+                                parameter: 'query',
                             },
-                        ],
-                    });
+                            status: 404,
+                            title: 'Not Found',
+                        },
+                    ]);
                 });
 
                 test('should relationship user relationship notes', async () => {
@@ -498,18 +496,16 @@ describe('ResourceManager', () => {
                         ref: { type: 'users', id: '11', relationship: 'note', related: true },
                     });
                     assert.ok(result.ok === false);
-                    assert.deepStrictEqual(result.error.toJSON(), {
-                        errors: [
-                            {
-                                detail: undefined,
-                                source: {
-                                    parameter: 'query',
-                                },
-                                status: 404,
-                                title: 'Not found',
+                    assert.deepStrictEqual(result.error.toJSON(), [
+                        {
+                            detail: undefined,
+                            source: {
+                                parameter: 'query',
                             },
-                        ],
-                    });
+                            status: 404,
+                            title: 'Not Found',
+                        },
+                    ]);
                 });
             });
         });
@@ -625,18 +621,16 @@ describe('ResourceManager', () => {
                     ref: { type: 'users', id: '12' },
                 });
                 assert.ok(result.ok === false);
-                assert.deepStrictEqual(result.error.toJSON(), {
-                    errors: [
-                        {
-                            detail: undefined,
-                            source: {
-                                parameter: 'query',
-                            },
-                            status: 403,
-                            title: 'Forbidden',
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        detail: undefined,
+                        source: {
+                            parameter: 'query',
                         },
-                    ],
-                });
+                        status: 403,
+                        title: 'Forbidden',
+                    },
+                ]);
             });
 
             describe('with includes', () => {
@@ -1055,18 +1049,16 @@ describe('ResourceManager', () => {
                         },
                     });
                     assert.ok(result.ok === false);
-                    assert.deepStrictEqual(result.error.toJSON(), {
-                        errors: [
-                            {
-                                detail: undefined,
-                                source: {
-                                    parameter: 'include',
-                                },
-                                status: 400,
-                                title: 'Invalid Query Parameter',
+                    assert.deepStrictEqual(result.error.toJSON(), [
+                        {
+                            detail: undefined,
+                            source: {
+                                parameter: 'include',
                             },
-                        ],
-                    });
+                            status: 400,
+                            title: 'Invalid Query Parameter',
+                        },
+                    ]);
                 });
             });
 
@@ -1147,18 +1139,16 @@ describe('ResourceManager', () => {
                         },
                     });
                     assert.ok(result.ok === false);
-                    assert.deepStrictEqual(result.error.toJSON(), {
-                        errors: [
-                            {
-                                detail: "The resource type 'note' does not exist.",
-                                source: {
-                                    parameter: 'fields',
-                                },
-                                status: 400,
-                                title: 'Invalid Query Parameter',
+                    assert.deepStrictEqual(result.error.toJSON(), [
+                        {
+                            detail: 'The resource with type "note" is not existed.',
+                            source: {
+                                parameter: 'fields',
                             },
-                        ],
-                    });
+                            status: 400,
+                            title: 'Invalid Query Parameter',
+                        },
+                    ]);
                 });
 
                 test('should return error on getting invalid field resourse field', async () => {
@@ -1169,18 +1159,16 @@ describe('ResourceManager', () => {
                         },
                     });
                     assert.ok(result.ok === false);
-                    assert.deepStrictEqual(result.error.toJSON(), {
-                        errors: [
-                            {
-                                detail: "The resource type 'notes' does not have field 'name'.",
-                                source: {
-                                    parameter: 'fields',
-                                },
-                                status: 400,
-                                title: 'Invalid Query Parameter',
+                    assert.deepStrictEqual(result.error.toJSON(), [
+                        {
+                            detail: 'The resource with type "notes" does not have field "name".',
+                            source: {
+                                parameter: 'fields',
                             },
-                        ],
-                    });
+                            status: 400,
+                            title: 'Invalid Query Parameter',
+                        },
+                    ]);
                 });
             });
         });

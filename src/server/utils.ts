@@ -1,3 +1,4 @@
+import { ResourceIdentifier, ResourceKey } from '../types/common';
 import { CommonResource } from '../types/resource-declaration';
 
 export function filterResourceFields(resource: CommonResource, fields?: string[]): CommonResource {
@@ -15,4 +16,17 @@ export function filterResourceFields(resource: CommonResource, fields?: string[]
         }
     });
     return resource;
+}
+
+export function makeResourceKey(type: string, id: string): ResourceKey {
+    return `${type}/${id}`;
+}
+
+export function makeResourceIdentifierByResourceKey(resourceKey: ResourceKey): ResourceIdentifier<string> {
+    const [type, id] = resourceKey.split('/') as [string, string];
+
+    return {
+        type,
+        id,
+    };
 }

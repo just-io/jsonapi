@@ -1,4 +1,3 @@
-import { Schema } from '@just-io/schema';
 import {
     MultipleKeys,
     MultipleRelationshipTypes,
@@ -16,6 +15,8 @@ export type ResourceIdentifier<T> = {
     type: T;
     id: string;
 };
+
+export type ResourceKey = `${string}/${string}`;
 
 export type ResourceLocalIdentifier<T> = {
     type: T;
@@ -119,19 +120,6 @@ export interface SortField {
 }
 
 export type FilterFields = Record<string, string[]>;
-
-export interface PageProvider<P> {
-    schema: Schema<P, 'default'>;
-    extractFromEntries(entries: [string, string][]): P;
-    toEntries(page: P): [string, string][];
-    getPages(page: P, total: number, limit: number): { first: P; last: P; prev?: P; next?: P };
-}
-
-export interface MetaProvider<M> {
-    composeList(list: DataList<ResourceIdentifier<string>>): M | undefined;
-    compose(resource: ResourceIdentifier<string> | null): M | undefined;
-    composeRoot(queryRef: CommonQueryRef): M | undefined;
-}
 
 export type OperationRelationshipValue<D extends ResourceDeclaration> =
     | OperationResourceIdentifier<SingleRelationshipTypes<D>>

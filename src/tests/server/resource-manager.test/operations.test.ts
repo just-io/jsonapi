@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { Context, makeResourceManager, NoteDeclaration, TagDeclaration } from '../prepare';
-import { operation } from '../../server/operation';
-import { AddResourceOperation } from '../../types/common';
+import { Context, makeResourceManager, NoteDeclaration, TagDeclaration } from '../../prepare';
+import { operation } from '../../../common/operation';
+import { AddResourceOperation } from '../../../types/common';
 
 describe('ResourceManager', () => {
     describe('method operations', () => {
@@ -160,18 +160,16 @@ describe('ResourceManager', () => {
                 } as AddResourceOperation<TagDeclaration>,
             ]);
             assert.ok(result.ok === false);
-            assert.deepStrictEqual(result.error.toJSON(), {
-                errors: [
-                    {
-                        detail: 'The resource with lid does not have reference.',
-                        source: {
-                            pointer: '/1/data/relationships/note/lid',
-                        },
-                        status: 400,
-                        title: 'Invalid Resource Lid',
+            assert.deepStrictEqual(result.error.toJSON(), [
+                {
+                    detail: 'The resource with "lid" does not have reference.',
+                    source: {
+                        pointer: '/1/data/relationships/note/lid',
                     },
-                ],
-            });
+                    status: 400,
+                    title: 'Invalid Resource Lid',
+                },
+            ]);
         });
     });
 });

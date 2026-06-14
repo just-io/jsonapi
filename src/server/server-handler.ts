@@ -1,12 +1,10 @@
-import { defaultErrorFormatter, ErrorKeeper, ErrorSet, Pointer } from '@just-io/schema';
+import { ErrorSet, Pointer, schemas } from '@just-io/schema';
 import { EventMap, ResourceManager } from './resource-manager';
 import {
     CommonQuery,
     DataList,
-    MetaProvider,
     OperationQueryRef,
     OperationResourceIdentifier,
-    PageProvider,
     Query,
     ResourceIdentifier,
 } from '../types/common';
@@ -22,9 +20,10 @@ import {
     Resource,
     ResourceDeclaration,
 } from '../types/resource-declaration';
-import schemas from './schemas';
 import { EventStore } from '@just-io/utils';
 import { CommonError, FetchResponse, FetchResponseError } from '../types/formats';
+import { defaultErrorFormatter, ErrorFormatter } from './error-formatter';
+import { MetaProvider, PageProvider } from './types';
 
 export type Response<C, P, M> = {
     status: number;
@@ -341,17 +340,20 @@ export class ServerHandler<C, P, M> {
         return this;
     }
 
-    async #handleGet(context: C, query: CommonQuery<P>): Promise<Response<C, P, M>> {
+    async #handleGet(context: C, query: CommonQuery<P>, errorFormatter: ErrorFormatter): Promise<Response<C, P, M>> {
         if ('id' in query.ref && 'relationship' in query.ref) {
             const { result, eventStore } = await this.#resourceManager.relationship(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'relationship'>,
+                errorFormatter,
             );
 
             if (!result.ok) {
                 return {
                     status: result.error.errors[0].status ?? 422,
-                    body: result.error.toJSON(),
+                    body: {
+                        errors: result.error.toJSON(),
+                    },
                     eventStore,
                 };
             }
@@ -395,12 +397,15 @@ export class ServerHandler<C, P, M> {
             const { result, eventStore } = await this.#resourceManager.get(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'id'>,
+                errorFormatter,
             );
 
             if (!result.ok) {
                 return {
                     status: result.error.errors[0].status ?? 422,
-                    body: result.error.toJSON(),
+                    body: {
+                        errors: result.error.toJSON(),
+                    },
                     eventStore,
                 };
             }
@@ -430,12 +435,14 @@ export class ServerHandler<C, P, M> {
             }
         }
 
-        const { result, eventStore } = await this.#resourceManager.list(context, query);
+        const { result, eventStore } = await this.#resourceManager.list(context, query, errorFormatter);
 
         if (!result.ok) {
             return {
                 status: result.error.errors[0].status ?? 422,
-                body: result.error.toJSON(),
+                body: {
+                    errors: result.error.toJSON(),
+                },
                 eventStore,
             };
         }
@@ -453,30 +460,47 @@ export class ServerHandler<C, P, M> {
         };
     }
 
-    async #handlePost(context: C, query: CommonQuery<P>, body: unknown): Promise<Response<C, P, M>> {
+    async #handlePost(
+        context: C,
+        query: CommonQuery<P>,
+        body: unknown,
+        errorFormatter: ErrorFormatter,
+    ): Promise<Response<C, P, M>> {
         if ('id' in query.ref && !('relationship' in query.ref)) {
-            throw new ErrorSet().add(ErrorFactory.makeQueryError('Should not contain resource id'));
+            throw new ErrorSet().add(ErrorFactory.makeQueryError(errorFormatter.query.invalidId()));
         }
         if (query.ref.type === 'operations') {
-            return this.#handleOperations(context, body);
+            return this.#handleOperations(context, body, errorFormatter);
         }
         if ('relationship' in query.ref) {
-            const errorKeeper = new ErrorKeeper(new Pointer(''), 'default', defaultErrorFormatter);
-
-            if (!resourceIdentifiersBodySchema.is(body, errorKeeper)) {
-                throw errorKeeper.makeErrorSet();
+            const validateResult = resourceIdentifiersBodySchema.validate(
+                body,
+                new Pointer(''),
+                errorFormatter.schema,
+                true,
+            );
+            if (!validateResult.ok) {
+                throw new ErrorSet(
+                    validateResult.error.errors.map((error) =>
+                        ErrorFactory.makeFieldErrorByValidationError(errorFormatter, error),
+                    ),
+                );
             }
+
             const { result, eventStore } = await this.#resourceManager.addRelationships(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'relationship'>,
-                body.data,
+                validateResult.value.data,
                 new Pointer('', 'data'),
+                errorFormatter,
             );
 
             if (!result.ok) {
                 return {
                     status: result.error.errors[0].status ?? 422,
-                    body: result.error.toJSON(),
+                    body: {
+                        errors: result.error.toJSON(),
+                    },
                     eventStore,
                 };
             }
@@ -493,22 +517,29 @@ export class ServerHandler<C, P, M> {
                 eventStore,
             };
         } else {
-            const errorKeeper = new ErrorKeeper(new Pointer(''), 'default', defaultErrorFormatter);
-
-            if (!newResourceBodySchema.is(body, errorKeeper)) {
-                throw errorKeeper.makeErrorSet();
+            const validateResult = newResourceBodySchema.validate(body, new Pointer(''), errorFormatter.schema, true);
+            if (!validateResult.ok) {
+                throw new ErrorSet(
+                    validateResult.error.errors.map((error) =>
+                        ErrorFactory.makeFieldErrorByValidationError(errorFormatter, error),
+                    ),
+                );
             }
+
             const { result, eventStore } = await this.#resourceManager.add(
                 context,
                 query,
-                body.data,
+                validateResult.value.data,
                 new Pointer('', 'data'),
+                errorFormatter,
             );
 
             if (!result.ok) {
                 return {
                     status: result.error.errors[0].status ?? 422,
-                    body: result.error.toJSON(),
+                    body: {
+                        errors: result.error.toJSON(),
+                    },
                     eventStore,
                 };
             }
@@ -527,16 +558,19 @@ export class ServerHandler<C, P, M> {
         }
     }
 
-    async #handleOperations(context: C, body: unknown): Promise<Response<C, P, M>> {
-        const errorKeeper = new ErrorKeeper(new Pointer(''), 'default', defaultErrorFormatter);
-
-        if (!operationsSchema.is(body, errorKeeper)) {
-            throw errorKeeper.makeErrorSet();
+    async #handleOperations(context: C, body: unknown, errorFormatter: ErrorFormatter): Promise<Response<C, P, M>> {
+        const validateResult = operationsSchema.validate(body, new Pointer(''), errorFormatter.schema, true);
+        if (!validateResult.ok) {
+            throw new ErrorSet(
+                validateResult.error.errors.map((error) =>
+                    ErrorFactory.makeFieldErrorByValidationError(errorFormatter, error),
+                ),
+            );
         }
 
         const { result, eventStore } = await this.#resourceManager.operations(
             context,
-            body['atomic:operations'].map((operation) => {
+            validateResult.value['atomic:operations'].map((operation) => {
                 if (operation.op === 'add' && !('ref' in operation)) {
                     return {
                         op: 'add',
@@ -579,12 +613,15 @@ export class ServerHandler<C, P, M> {
                 throw new Error('Invalid');
             }),
             new Pointer('', 'atomic:operations'),
+            errorFormatter,
         );
 
         if (!result.ok) {
             return {
                 status: result.error.errors[0].status ?? 422,
-                body: result.error.toJSON(),
+                body: {
+                    errors: result.error.toJSON(),
+                },
                 eventStore,
             };
         }
@@ -593,7 +630,7 @@ export class ServerHandler<C, P, M> {
             status: 200,
             body: {
                 'atomic:results': result.value.map((value, i) => {
-                    const operation = body['atomic:operations'][i];
+                    const operation = validateResult.value['atomic:operations'][i];
                     if (operation.op === 'add' && !('ref' in operation)) {
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         const resource = value as Resource<any>;
@@ -694,29 +731,40 @@ export class ServerHandler<C, P, M> {
         };
     }
 
-    async #handlePatch(context: C, query: CommonQuery<P>, body: unknown): Promise<Response<C, P, M>> {
+    async #handlePatch(
+        context: C,
+        query: CommonQuery<P>,
+        body: unknown,
+        errorFormatter: ErrorFormatter,
+    ): Promise<Response<C, P, M>> {
         if (!('id' in query.ref)) {
-            throw new ErrorSet().add(ErrorFactory.makeQueryError('Should contain resource id'));
+            throw new ErrorSet().add(ErrorFactory.makeQueryError(errorFormatter.query.invalidId()));
         }
         if ('relationship' in query.ref) {
-            const errorKeeper = new ErrorKeeper(new Pointer(''), 'default', defaultErrorFormatter);
-
-            if (!relationshipBodySchema.is(body, errorKeeper)) {
-                throw errorKeeper.makeErrorSet();
+            const validateResult = relationshipBodySchema.validate(body, new Pointer(''), errorFormatter.schema, true);
+            if (!validateResult.ok) {
+                throw new ErrorSet(
+                    validateResult.error.errors.map((error) =>
+                        ErrorFactory.makeFieldErrorByValidationError(errorFormatter, error),
+                    ),
+                );
             }
             const { result, eventStore } = await this.#resourceManager.updateRelationship(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'relationship'>,
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                 // @ts-expect-error
-                body.data,
+                validateResult.value.data,
                 new Pointer('', 'data'),
+                errorFormatter,
             );
 
             if (!result.ok) {
                 return {
                     status: result.error.errors[0].status ?? 422,
-                    body: result.error.toJSON(),
+                    body: {
+                        errors: result.error.toJSON(),
+                    },
                     eventStore,
                 };
             }
@@ -733,22 +781,33 @@ export class ServerHandler<C, P, M> {
                 eventStore,
             };
         } else {
-            const errorKeeper = new ErrorKeeper(new Pointer(''), 'default', defaultErrorFormatter);
-
-            if (!commonResourceBodySchema.is(body, errorKeeper)) {
-                throw errorKeeper.makeErrorSet();
+            const validateResult = commonResourceBodySchema.validate(
+                body,
+                new Pointer(''),
+                errorFormatter.schema,
+                true,
+            );
+            if (!validateResult.ok) {
+                throw new ErrorSet(
+                    validateResult.error.errors.map((error) =>
+                        ErrorFactory.makeFieldErrorByValidationError(errorFormatter, error),
+                    ),
+                );
             }
             const { result, eventStore } = await this.#resourceManager.update(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'id'>,
-                body.data as EditableResource<ResourceDeclaration>,
+                validateResult.value.data as EditableResource<ResourceDeclaration>,
                 new Pointer('', 'data'),
+                errorFormatter,
             );
 
             if (!result.ok) {
                 return {
                     status: result.error.errors[0].status ?? 422,
-                    body: result.error.toJSON(),
+                    body: {
+                        errors: result.error.toJSON(),
+                    },
                     eventStore,
                 };
             }
@@ -767,27 +826,43 @@ export class ServerHandler<C, P, M> {
         }
     }
 
-    async #handleDelete(context: C, query: CommonQuery<P>, body: unknown): Promise<Response<C, P, M>> {
+    async #handleDelete(
+        context: C,
+        query: CommonQuery<P>,
+        body: unknown,
+        errorFormatter: ErrorFormatter,
+    ): Promise<Response<C, P, M>> {
         if (!('id' in query.ref)) {
-            throw new ErrorSet().add(ErrorFactory.makeQueryError('Should contain resource id'));
+            throw new ErrorSet().add(ErrorFactory.makeQueryError(errorFormatter.query.invalidId()));
         }
         if ('relationship' in query.ref) {
-            const errorKeeper = new ErrorKeeper(new Pointer(''), 'default', defaultErrorFormatter);
-
-            if (!resourceIdentifiersBodySchema.is(body, errorKeeper)) {
-                throw errorKeeper.makeErrorSet();
+            const validateResult = resourceIdentifiersBodySchema.validate(
+                body,
+                new Pointer(''),
+                errorFormatter.schema,
+                true,
+            );
+            if (!validateResult.ok) {
+                throw new ErrorSet(
+                    validateResult.error.errors.map((error) =>
+                        ErrorFactory.makeFieldErrorByValidationError(errorFormatter, error),
+                    ),
+                );
             }
             const { result, eventStore } = await this.#resourceManager.removeRelationships(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'relationship'>,
-                body.data,
+                validateResult.value.data,
                 new Pointer('', 'data'),
+                errorFormatter,
             );
 
             if (!result.ok) {
                 return {
                     status: result.error.errors[0].status ?? 422,
-                    body: result.error.toJSON(),
+                    body: {
+                        errors: result.error.toJSON(),
+                    },
                     eventStore,
                 };
             }
@@ -808,6 +883,7 @@ export class ServerHandler<C, P, M> {
                 context,
                 query as Query<P, ResourceDeclaration, [], 'id'>,
                 new Pointer('', 'data'),
+                errorFormatter,
             );
 
             return {
@@ -823,31 +899,36 @@ export class ServerHandler<C, P, M> {
         method: 'GET' | 'POST' | 'PATCH' | 'DELETE' | string,
         url: string,
         body: unknown,
+        errorFormatter: ErrorFormatter = defaultErrorFormatter,
     ): Promise<Response<C, P, M>> {
-        let query: CommonQuery<P>;
         try {
-            query = this.queryConverter.parse(url);
-            if (method.toUpperCase() === 'GET') {
-                return await this.#handleGet(context, query);
-            } else if (method.toUpperCase() === 'POST') {
-                return await this.#handlePost(context, query, body);
-            } else if (method.toUpperCase() === 'PATCH') {
-                return await this.#handlePatch(context, query, body);
-            } else if (method.toUpperCase() === 'DELETE') {
-                return await this.#handleDelete(context, query, body);
+            const result = this.queryConverter.parse(url, errorFormatter);
+            if (!result.ok) {
+                throw result.error;
             }
-            throw new ErrorSet().add(ErrorFactory.makeInvalidMethodError(method));
+            if (method.toUpperCase() === 'GET') {
+                return await this.#handleGet(context, result.value, errorFormatter);
+            } else if (method.toUpperCase() === 'POST') {
+                return await this.#handlePost(context, result.value, body, errorFormatter);
+            } else if (method.toUpperCase() === 'PATCH') {
+                return await this.#handlePatch(context, result.value, body, errorFormatter);
+            } else if (method.toUpperCase() === 'DELETE') {
+                return await this.#handleDelete(context, result.value, body, errorFormatter);
+            }
+            throw new ErrorSet().add(ErrorFactory.makeInvalidMethodError(errorFormatter, method));
         } catch (err) {
             if (err instanceof ErrorSet) {
                 return {
                     status: (err as ErrorSet<CommonError>).errors[0].status ?? 422,
-                    body: err.toJSON(),
+                    body: {
+                        errors: err.toJSON(),
+                    },
                     eventStore: this.#resourceManager.makeStore(),
                 };
             }
             return {
                 status: 500,
-                body: { errors: [ErrorFactory.makeInternalError()] },
+                body: { errors: [ErrorFactory.makeInternalError(errorFormatter)] },
                 eventStore: this.#resourceManager.makeStore(),
             };
         }

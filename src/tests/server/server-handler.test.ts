@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { Context, makeServerHandler } from './prepare';
+import { Context, makeResourceManager, makeServerHandler } from '../prepare';
 
 describe('ServerHandler', () => {
     const context: Context = {
@@ -10,7 +10,8 @@ describe('ServerHandler', () => {
     };
 
     test('should return error of unknown resource type', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(context, 'GET', 'www.example.com/api/v1/passwords', '');
 
         assert.deepStrictEqual(
@@ -20,7 +21,7 @@ describe('ServerHandler', () => {
                 body: {
                     errors: [
                         {
-                            detail: "The resource with type 'passwords' is not existed.",
+                            detail: 'The resource with type "passwords" is not existed.',
                             source: {
                                 parameter: 'query',
                             },
@@ -34,7 +35,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return error of invalid query', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(
             context,
             'GET',
@@ -54,7 +56,7 @@ describe('ServerHandler', () => {
                                 parameter: 'query',
                             },
                             status: 404,
-                            title: 'Not found',
+                            title: 'Not Found',
                         },
                     ],
                 },
@@ -63,7 +65,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return list of users', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(context, 'GET', 'www.example.com/api/v1/users', '');
 
         assert.deepStrictEqual(
@@ -167,7 +170,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return user', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(context, 'GET', 'www.example.com/api/v1/users/11', '');
 
         assert.deepStrictEqual(
@@ -222,7 +226,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return not-found user', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(context, 'GET', 'www.example.com/api/v1/users/10', '');
 
         assert.deepStrictEqual(
@@ -242,7 +247,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return user notes', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(
             context,
             'GET',
@@ -286,7 +292,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return error of adding tag', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(context, 'POST', 'www.example.com/api/v1/tags', {
             data: {},
         });
@@ -298,16 +305,28 @@ describe('ServerHandler', () => {
                 body: {
                     errors: [
                         {
-                            details: 'Should be existed.',
-                            pointer: ['', 'data', 'type'],
+                            detail: 'Should be existed.',
+                            source: {
+                                pointer: '/data/type',
+                            },
+                            status: 422,
+                            title: 'Invalid Resource Field',
                         },
                         {
-                            details: 'Should be existed.',
-                            pointer: ['', 'data', 'attributes'],
+                            detail: 'Should be existed.',
+                            source: {
+                                pointer: '/data/attributes',
+                            },
+                            status: 422,
+                            title: 'Invalid Resource Field',
                         },
                         {
-                            details: 'Should be existed.',
-                            pointer: ['', 'data', 'relationships'],
+                            detail: 'Should be existed.',
+                            source: {
+                                pointer: '/data/relationships',
+                            },
+                            status: 422,
+                            title: 'Invalid Resource Field',
                         },
                     ],
                 },
@@ -316,7 +335,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return data after adding tag', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(context, 'POST', 'www.example.com/api/v1/tags', {
             data: {
                 type: 'tags',
@@ -374,7 +394,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return data after updating tag', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(context, 'PATCH', 'www.example.com/api/v1/tags/23', {
             data: {
                 id: '23',
@@ -425,7 +446,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return null data after removing tag', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(context, 'DELETE', 'www.example.com/api/v1/tags/23', '');
 
         const id = '23';
@@ -447,7 +469,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return note tags after adding tags', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(
             context,
             'POST',
@@ -506,7 +529,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return note tags after updating tags', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(
             context,
             'PATCH',
@@ -553,7 +577,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return note tags after removing tags', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(
             context,
             'DELETE',
@@ -604,7 +629,8 @@ describe('ServerHandler', () => {
     });
 
     test('should return operation results', async () => {
-        const serverHandler = makeServerHandler();
+        const resourceManager = makeResourceManager();
+        const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(context, 'POST', 'www.example.com/api/v1/operations', {
             'atomic:operations': [
                 {

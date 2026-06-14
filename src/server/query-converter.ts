@@ -1,8 +1,10 @@
-import { ErrorSet } from '@just-io/schema';
+import { ErrorSet, Result } from '@just-io/schema';
 import { ErrorFactory } from './errors';
 import { ResourceDeclaration } from '../types/resource-declaration';
-import { ArrayFields, PageProvider, Query, QueryParams, QueryRef } from '../types/common';
+import { ArrayFields, Query, QueryParams, QueryRef } from '../types/common';
 import { CommonError } from '../types/formats';
+import { PageProvider } from './types';
+import { ErrorFormatter } from './error-formatter';
 
 export class QueryConverter<P> {
     #domain = '';
@@ -25,15 +27,28 @@ export class QueryConverter<P> {
         return this;
     }
 
-    parsePath<D extends ResourceDeclaration>(url: string): QueryRef<D, 'list' | 'id' | 'relationship'> {
+    parsePath<D extends ResourceDeclaration>(
+        url: string,
+        errorFormatter: ErrorFormatter,
+    ): Result<QueryRef<D, 'list' | 'id' | 'relationship'>, ErrorSet<CommonError>> {
         const i = url.indexOf('/');
         if (i === -1) {
-            throw new ErrorSet<CommonError>().add(ErrorFactory.makeQueryError('Type should be existed'));
+            return {
+                ok: false,
+                error: new ErrorSet<CommonError>().add(
+                    ErrorFactory.makeQueryError(errorFormatter.query.invalidTypeTitle()),
+                ),
+            };
         }
         const [path] = url.split('?');
         const [type, id, relationships, related] = path.slice(i + this.#prefix.length + 1).split('/');
         if (!type) {
-            throw new ErrorSet<CommonError>().add(ErrorFactory.makeQueryError('Type should be existed'));
+            return {
+                ok: false,
+                error: new ErrorSet<CommonError>().add(
+                    ErrorFactory.makeQueryError(errorFormatter.query.invalidTypeTitle()),
+                ),
+            };
         }
 
         const queryRef: QueryRef<D, 'list' | 'id' | 'relationship'> = {
@@ -51,7 +66,10 @@ export class QueryConverter<P> {
             }
         }
 
-        return queryRef;
+        return {
+            ok: true,
+            value: queryRef,
+        };
     }
 
     makePath<D extends ResourceDeclaration>(queryRef: QueryRef<D, 'list' | 'id' | 'relationship'>): string {
@@ -70,9 +88,13 @@ export class QueryConverter<P> {
 
     parse<D extends ResourceDeclaration, I extends ResourceDeclaration[]>(
         url: string,
-    ): Query<P, D, I, 'list' | 'id' | 'relationship'> {
+        errorFormatter: ErrorFormatter,
+    ): Result<Query<P, D, I, 'list' | 'id' | 'relationship'>, ErrorSet<CommonError>> {
         const [, params] = url.split('?');
-        const queryRef = this.parsePath(url);
+        const queryRefResult = this.parsePath(url, errorFormatter);
+        if (!queryRefResult.ok) {
+            return queryRefResult;
+        }
         const queryParams: Required<Omit<QueryParams<P, D, I>, 'page'>> = {
             fields: {} as ArrayFields<[D, ...I]>,
             filter: {},
@@ -84,23 +106,22 @@ export class QueryConverter<P> {
 
         const pageEntries: [string, string][] = [];
 
-        Array.from(searchParams.entries()).forEach(([key, value]) => {
+        const errorSet = new ErrorSet<CommonError>();
+
+        for (const [key, value] of searchParams.entries()) {
             if (key === 'include') {
                 queryParams.include = value.split(',').map((sub) => sub.split('.'));
                 if (
                     queryParams.include.some((includeValue) => includeValue.some((subIncludeValue) => !subIncludeValue))
                 ) {
-                    throw new ErrorSet<CommonError>().add(
-                        ErrorFactory.makeQueryError(`Invalid search param '${key}=${value}'`),
-                    );
+                    errorSet.add(ErrorFactory.makeQueryError(errorFormatter.query.invalidSearchParam(key, value)));
                 }
-                return;
+                continue;
             }
             if (key === 'sort') {
                 if (!value) {
-                    throw new ErrorSet<CommonError>().add(
-                        ErrorFactory.makeQueryError(`Invalid search param '${key}=${value}'`),
-                    );
+                    errorSet.add(ErrorFactory.makeQueryError(errorFormatter.query.invalidSearchParam(key, value)));
+                    continue;
                 }
                 queryParams.sort = value.split(',').map((field) => {
                     if (field[0] === '-') {
@@ -115,29 +136,23 @@ export class QueryConverter<P> {
                     };
                 }) as Required<QueryParams<P, D, I>>['sort'];
                 if (queryParams.sort.some((sort) => !sort.field)) {
-                    throw new ErrorSet<CommonError>().add(
-                        ErrorFactory.makeQueryError(`Invalid search param '${key}=${value}'`),
-                    );
+                    errorSet.add(ErrorFactory.makeQueryError(errorFormatter.query.invalidSearchParam(key, value)));
                 }
-                return;
+                continue;
             }
             const scopedParam = key.match(/(fields|filter|page)\[(.+)\]/);
             if (scopedParam) {
                 if (!scopedParam[2]) {
-                    throw new ErrorSet<CommonError>().add(
-                        ErrorFactory.makeQueryError(`Invalid search param '${key}=${value}'`),
-                    );
+                    errorSet.add(ErrorFactory.makeQueryError(errorFormatter.query.invalidSearchParam(key, value)));
+                    continue;
                 }
                 if (scopedParam[1] === 'fields') {
                     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                     // @ts-expect-error
                     queryParams.fields[scopedParam[2]] = value ? value.split(',') : [];
                     if (queryParams.fields[scopedParam[2]]!.some((field) => !field)) {
-                        throw new ErrorSet<CommonError>().add(
-                            ErrorFactory.makeQueryError(`Invalid search param '${key}=${value}'`),
-                        );
+                        errorSet.add(ErrorFactory.makeQueryError(errorFormatter.query.invalidSearchParam(key, value)));
                     }
-                    return;
                 }
                 if (scopedParam[1] === 'filter') {
                     if (!queryParams.filter[scopedParam[2]]) {
@@ -146,24 +161,40 @@ export class QueryConverter<P> {
                         queryParams.filter[scopedParam[2]] = [];
                     }
                     queryParams.filter[scopedParam[2]]!.push(value);
-                    return;
                 }
                 if (scopedParam[1] === 'page') {
                     pageEntries.push([scopedParam[2], value]);
-                    return;
                 }
+            } else {
+                errorSet.add(ErrorFactory.makeQueryError(errorFormatter.query.invalidSearchParam(key, value)));
             }
+        }
 
-            throw new ErrorSet<CommonError>().add(
-                ErrorFactory.makeQueryError(`Invalid search param '${key}=${value}'`),
-            );
-        });
+        const pageResult = this.#pageProvider.extractFromEntries(pageEntries, errorFormatter);
+
+        if (!pageResult.ok) {
+            errorSet.append(pageResult.error);
+            return {
+                ok: false,
+                error: errorSet,
+            };
+        }
+
+        if (errorSet.errors.length) {
+            return {
+                ok: false,
+                error: errorSet,
+            };
+        }
 
         return {
-            ref: queryRef,
-            params: {
-                ...queryParams,
-                page: this.#pageProvider.extractFromEntries(pageEntries),
+            ok: true,
+            value: {
+                ref: queryRefResult.value,
+                params: {
+                    ...queryParams,
+                    page: pageResult.value,
+                },
             },
         };
     }
@@ -228,7 +259,7 @@ export class QueryConverter<P> {
                 include: [],
                 sort: [],
                 filter: {},
-                page: this.#pageProvider.extractFromEntries([]),
+                page: this.#pageProvider.makeDefault(),
             },
         };
     }

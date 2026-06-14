@@ -1,4 +1,4 @@
-import { Schema } from '@just-io/schema';
+import { ErrorSet, Result, Schema } from '@just-io/schema';
 import {
     AttributeDeclaration,
     FilterDeclaration,
@@ -6,6 +6,8 @@ import {
     ResourceDeclaration,
 } from '../types/resource-declaration';
 import { DataList, ResourceIdentifier } from '../types/common';
+import { CommonError } from '../types/formats';
+import { ErrorFormatter } from './error-formatter';
 
 export type AttributeFieldSchema<A extends AttributeDeclaration<unknown>> = (A['mode'] extends 'readonly'
     ? {
@@ -13,7 +15,7 @@ export type AttributeFieldSchema<A extends AttributeDeclaration<unknown>> = (A['
       }
     : {
           mode: A['mode'];
-          schema: Schema<A['type'], 'default'>;
+          schema: Schema<A['type']>;
       }) &
     (A extends { optional: true }
         ? {
@@ -69,17 +71,20 @@ export type RelationshipFieldSchema<R extends RelationshipDeclaration<string>, C
                       context: C,
                       resourceId: string,
                       resourceIdentifiers: ResourceIdentifier<R['types']>[],
-                  ) => Promise<void>;
+                      errorFormatter: ErrorFormatter,
+                  ) => Promise<Result<void, ErrorSet<CommonError>>>;
                   update: (
                       context: C,
                       resourceId: string,
                       resourceIdentifiers: ResourceIdentifier<R['types']>[],
-                  ) => Promise<void>;
+                      errorFormatter: ErrorFormatter,
+                  ) => Promise<Result<void, ErrorSet<CommonError>>>;
                   remove: (
                       context: C,
                       resourceId: string,
                       resourceIdentifiers: ResourceIdentifier<R['types']>[],
-                  ) => Promise<void>;
+                      errorFormatter: ErrorFormatter,
+                  ) => Promise<Result<void, ErrorSet<CommonError>>>;
               }
         : R['nullable'] extends true
         ? R['mode'] extends 'readonly' | 'unchangeable'
@@ -102,7 +107,8 @@ export type RelationshipFieldSchema<R extends RelationshipDeclaration<string>, C
                       context: C,
                       resourceId: string,
                       resourceIdentifier: ResourceIdentifier<R['types']> | null,
-                  ) => Promise<void>;
+                      errorFormatter: ErrorFormatter,
+                  ) => Promise<Result<void, ErrorSet<CommonError>>>;
               }
         : R['mode'] extends 'readonly' | 'unchangeable'
         ? {
@@ -118,7 +124,8 @@ export type RelationshipFieldSchema<R extends RelationshipDeclaration<string>, C
                   context: C,
                   resourceId: string,
                   resourceIdentifier: ResourceIdentifier<R['types']>,
-              ) => Promise<void>;
+                  errorFormatter: ErrorFormatter,
+              ) => Promise<Result<void, ErrorSet<CommonError>>>;
           });
 
 export type CommonRelationshipFieldSchema<C, P> =
@@ -152,11 +159,11 @@ export type RelationshipSchema<D extends ResourceDeclaration, C, P> = {
 export type FilterFieldSchema<F extends FilterDeclaration<unknown>> = F extends { multiple: true }
     ? {
           multiple: true;
-          transformer: (values: string[]) => F['type'];
+          transformer: (values: string[], errorFormatter: ErrorFormatter) => Result<F['type'], ErrorSet<CommonError>>;
       }
     : {
           multiple?: false;
-          transformer: (values: string) => F['type'];
+          transformer: (values: string, errorFormatter: ErrorFormatter) => Result<F['type'], ErrorSet<CommonError>>;
       };
 
 export type FilterSchema<D extends ResourceDeclaration> = {

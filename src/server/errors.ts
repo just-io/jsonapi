@@ -1,121 +1,153 @@
-import { Pointer } from '@just-io/schema';
+import { Pointer, ValidationError } from '@just-io/schema';
 import { CommonError } from '../types/formats';
-
-// add lang
-// move to formatters
+import { ErrorFormatter } from './error-formatter';
 
 export class ErrorFactory {
-    static makeInternalError(detail?: string): CommonError {
-        return { title: 'The backend responded with an error', status: 500, detail };
+    static makeInternalError(errorFormatter: ErrorFormatter, detail?: string): CommonError {
+        return { title: errorFormatter.server.internalTitle(), status: 500, detail };
     }
 
     static makeQueryError(title: string, detail?: string): CommonError {
         return { source: { parameter: 'query' }, title, status: 400, detail };
     }
 
-    static makeMethodNotAllowedError(method: 'get' | 'post' | 'patch' | 'delete'): CommonError {
+    static makeMethodNotAllowedError(
+        errorFormatter: ErrorFormatter,
+        method: 'get' | 'post' | 'patch' | 'delete',
+    ): CommonError {
         return {
             source: { parameter: 'method' },
-            title: 'Method Not Allowed',
+            title: errorFormatter.server.methodNotAllowedTitle(),
             status: 405,
-            detail: `The method '${method}' is not allowed.`,
+            detail: errorFormatter.server.methodNotAllowed(method),
         };
     }
 
-    static makeInvalidMethodError(method: string): CommonError {
+    static makeInvalidMethodError(errorFormatter: ErrorFormatter, method: string): CommonError {
         return {
             source: { parameter: 'method' },
-            title: 'Method Not Allowed',
+            title: errorFormatter.server.methodNotAllowedTitle(),
             status: 405,
-            detail: `The method '${method}' is invalid.`,
+            detail: errorFormatter.server.methodNotAllowed(method),
         };
     }
 
     static makeMethodNotAllowedErrorByPointer(
+        errorFormatter: ErrorFormatter,
         method: 'list' | 'add' | 'update' | 'remove',
         type: string,
         pointer: Pointer,
     ): CommonError {
         return {
             source: { pointer: pointer.toString() },
-            title: 'Method Not Allowed',
+            title: errorFormatter.server.methodNotAllowedTitle(),
             status: 405,
-            detail: `The method '${method}' is not allowed for resource with type '${type}'.`,
+            detail: errorFormatter.server.methodNotAllowedForResourceType(method, type),
         };
     }
 
     static makeInvalidQueryParameterError(
-        location: 'include' | 'fields' | 'sort' | 'filter' | 'page' | Pointer,
+        errorFormatter: ErrorFormatter,
+        location: 'include' | 'fields' | 'sort' | 'filter' | 'page',
         detail?: string,
     ): CommonError {
         return {
-            source: location instanceof Pointer ? { pointer: location.toString() } : { parameter: location },
-            title: 'Invalid Query Parameter',
+            source: { parameter: location },
+            title: errorFormatter.query.invalidQueryParameterTitle(),
             status: 400,
             detail,
         };
     }
 
-    static makeForbiddenError(location: 'query' | 'include' | Pointer, detail?: string): CommonError {
+    static makeForbiddenError(
+        errorFormatter: ErrorFormatter,
+        location: 'query' | 'include' | Pointer,
+        detail?: string,
+    ): CommonError {
         return {
             source: location instanceof Pointer ? { pointer: location.toString() } : { parameter: location },
-            title: 'Forbidden',
+            title: errorFormatter.resource.forbiddenTitle(),
             status: 403,
             detail,
         };
     }
 
-    static makeNotFoundError(location: 'query' | 'include' | Pointer, detail?: string): CommonError {
+    static makeNotFoundError(
+        errorFormatter: ErrorFormatter,
+        location: 'query' | 'include' | Pointer,
+        detail?: string,
+    ): CommonError {
         return {
             source: location instanceof Pointer ? { pointer: location.toString() } : { parameter: location },
-            title: 'Not found',
+            title: errorFormatter.resource.notFoundTitle(),
             status: 404,
             detail,
         };
     }
 
-    static makeInvalidResourceTypeError(type: string, location: 'query' | Pointer): CommonError {
+    static makeInvalidResourceTypeError(
+        errorFormatter: ErrorFormatter,
+        type: string,
+        location: 'query' | Pointer,
+    ): CommonError {
         return {
             source: location instanceof Pointer ? { pointer: location.toString() } : { parameter: location },
-            title: 'Invalid Resource Type',
+            title: errorFormatter.resource.invalidResourceTypeTitle(),
             status: 404,
-            detail: `The resource with type '${type}' is not existed.`,
+            detail: errorFormatter.resource.invalidResourceType(type),
         };
     }
 
-    static makeInvalidResourceIdError(pointer: Pointer): CommonError {
+    static makeInvalidResourceIdError(errorFormatter: ErrorFormatter, pointer: Pointer): CommonError {
         return {
             source: { pointer: pointer.toString() },
-            title: 'Invalid Resource Id',
+            title: errorFormatter.resource.invalidResourceIdTitle(),
             status: 400,
-            detail: `The resource with id does not equal query id.`,
+            detail: errorFormatter.resource.invalidResourceId(),
         };
     }
 
-    static makeInvalidResourceLidError(pointer: Pointer): CommonError {
+    static makeInvalidResourceLidError(errorFormatter: ErrorFormatter, pointer: Pointer): CommonError {
         return {
             source: { pointer: pointer.toString() },
-            title: 'Invalid Resource Lid',
+            title: errorFormatter.resource.invalidResourceLidTitle(),
             status: 400,
-            detail: `The resource with lid does not have reference.`,
+            detail: errorFormatter.resource.invalidResourceLid(),
         };
     }
 
-    static makeFieldError(pointer: Pointer, detail?: string): CommonError {
+    static makeFieldError(errorFormatter: ErrorFormatter, pointer: Pointer, detail?: string): CommonError {
         return {
             source: { pointer: pointer.toString() },
-            title: 'Invalid Field',
+            title: errorFormatter.resource.invalidResourceFieldTitle(),
             status: 400,
             detail,
         };
     }
 
-    static makeContainingFieldError(pointer: Pointer, field: string): CommonError {
+    static makeContainingFieldError(
+        errorFormatter: ErrorFormatter,
+        pointer: Pointer,
+        type: string,
+        field: string,
+    ): CommonError {
         return {
             source: { pointer: pointer.toString() },
-            title: 'Invalid Field',
+            title: errorFormatter.resource.invalidResourceFieldTitle(),
             status: 400,
-            detail: `The resource does not have field '${field}'.`,
+            detail: errorFormatter.resource.invalidResourceField(type, field),
+        };
+    }
+
+    static makeFieldErrorByValidationError(
+        errorFormatter: ErrorFormatter,
+        validationError: ValidationError,
+    ): CommonError {
+        return {
+            source: { pointer: validationError.pointer.toString('/') },
+            title: errorFormatter.resource.invalidResourceFieldTitle(),
+            status: 422,
+            detail: validationError.detail,
         };
     }
 }

@@ -1,8 +1,9 @@
 import { ErrorFactory } from './errors';
-import { DataList, MetaProvider, PageProvider, ResourceIdentifier, CommonQueryRef } from '../types/common';
-import schemas from './schemas';
-import { ErrorSet } from '@just-io/schema';
+import { DataList, ResourceIdentifier, CommonQueryRef } from '../types/common';
+import { MetaProvider, PageProvider } from './types';
+import { ErrorSet, Result, schemas } from '@just-io/schema';
 import { CommonError } from '../types/formats';
+import { ErrorFormatter } from './error-formatter';
 
 export type DefaultPage = {
     number?: number;
@@ -22,9 +23,17 @@ export const pageProvider: PageProvider<DefaultPage> = {
             ),
         ),
     }),
-    extractFromEntries(entries: [string, string][]): DefaultPage {
+    makeDefault() {
         const page: DefaultPage = {};
-        entries.forEach(([key, value]) => {
+        return page;
+    },
+    extractFromEntries(
+        entries: [string, string][],
+        errorFormatter: ErrorFormatter,
+    ): Result<DefaultPage, ErrorSet<CommonError>> {
+        const page: DefaultPage = {};
+        const errorSet = new ErrorSet<CommonError>();
+        for (const [key, value] of entries) {
             const parts = key.match(/([^\]]+)(?:\]\[([^\]]+))?(?:\]\[([^\]]+))?/);
             if (parts) {
                 if (parts[1] === 'number') {
@@ -39,21 +48,36 @@ export const pageProvider: PageProvider<DefaultPage> = {
                         size: Number(value),
                     };
                 } else {
-                    throw new ErrorSet<CommonError>().add(
+                    errorSet.add(
                         ErrorFactory.makeInvalidQueryParameterError(
+                            errorFormatter,
                             'page',
-                            `Invalid page search param '${key}=${value}'`,
+                            errorFormatter.query.invalidPageField(key, value),
                         ),
                     );
                 }
             } else {
-                throw new ErrorSet<CommonError>().add(
-                    ErrorFactory.makeInvalidQueryParameterError('page', `Invalid page search param '${key}=${value}'`),
+                errorSet.add(
+                    ErrorFactory.makeInvalidQueryParameterError(
+                        errorFormatter,
+                        'page',
+                        errorFormatter.query.invalidPageField(key, value),
+                    ),
                 );
             }
-        });
+        }
 
-        return page;
+        if (errorSet.errors.length) {
+            return {
+                ok: false,
+                error: errorSet,
+            };
+        }
+
+        return {
+            ok: true,
+            value: page,
+        };
     },
     toEntries(page: DefaultPage): [string, string][] {
         const entries: [string, string][] = [];
@@ -139,3 +163,12 @@ export const metaProvider: MetaProvider<DefaultMeta> = {
         return {};
     },
 };
+
+export function makePage(offset: number, limit: number): DefaultPage {
+    const number = Math.floor(offset / limit);
+
+    return {
+        number,
+        size: limit,
+    };
+}

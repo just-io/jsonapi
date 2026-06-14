@@ -1,8 +1,16 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { Context, makeClient, NoteDeclaration, TagDeclaration, UserDeclaration } from './prepare';
-import { operation } from '../server/operation';
+import {
+    Context,
+    makeClient,
+    makeResourceManager,
+    makeServerHandler,
+    NoteDeclaration,
+    TagDeclaration,
+    UserDeclaration,
+} from '../prepare';
+import { operation } from '../../common/operation';
 
 describe('Client', () => {
     const context: Context = {
@@ -12,7 +20,9 @@ describe('Client', () => {
 
     describe('method get', () => {
         test('should return resource result', async () => {
-            const client = makeClient();
+            const resourceManager = makeResourceManager();
+            const serverHandler = makeServerHandler(resourceManager);
+            const client = makeClient(serverHandler);
 
             const result = await client
                 .get<NoteDeclaration>('notes', '12')
@@ -114,7 +124,9 @@ describe('Client', () => {
         });
 
         test('should return null result', async () => {
-            const client = makeClient();
+            const resourceManager = makeResourceManager();
+            const serverHandler = makeServerHandler(resourceManager);
+            const client = makeClient(serverHandler);
 
             const result = await client
                 .get<NoteDeclaration>('notes', '10')
@@ -135,7 +147,9 @@ describe('Client', () => {
 
     describe('method list', () => {
         test('should return resources result', async () => {
-            const client = makeClient();
+            const resourceManager = makeResourceManager();
+            const serverHandler = makeServerHandler(resourceManager);
+            const client = makeClient(serverHandler);
 
             const result = await client
                 .list<UserDeclaration>('users')
@@ -231,7 +245,9 @@ describe('Client', () => {
 
     describe('method relationship', () => {
         test('should return resources result', async () => {
-            const client = makeClient();
+            const resourceManager = makeResourceManager();
+            const serverHandler = makeServerHandler(resourceManager);
+            const client = makeClient(serverHandler);
 
             const result = await client
                 .relationship<UserDeclaration, 'notes'>('users', '11', 'notes')
@@ -281,7 +297,9 @@ describe('Client', () => {
 
     describe('method add', () => {
         test('should return added resource result', async () => {
-            const client = makeClient();
+            const resourceManager = makeResourceManager();
+            const serverHandler = makeServerHandler(resourceManager);
+            const client = makeClient(serverHandler);
 
             const result = await client
                 .add<NoteDeclaration>({
@@ -345,7 +363,9 @@ describe('Client', () => {
 
     describe('method update', () => {
         test('should return updated resource result', async () => {
-            const client = makeClient();
+            const resourceManager = makeResourceManager();
+            const serverHandler = makeServerHandler(resourceManager);
+            const client = makeClient(serverHandler);
 
             const result = await client
                 .update<NoteDeclaration>({
@@ -458,7 +478,9 @@ describe('Client', () => {
 
     describe('method remove', () => {
         test('should return null result', async () => {
-            const client = makeClient();
+            const resourceManager = makeResourceManager();
+            const serverHandler = makeServerHandler(resourceManager);
+            const client = makeClient(serverHandler);
 
             const result = await client.remove<NoteDeclaration>('notes', '12').exec(context);
 
@@ -475,7 +497,9 @@ describe('Client', () => {
 
     describe('method addRelationship', () => {
         test('should return updated resource result', async () => {
-            const client = makeClient();
+            const resourceManager = makeResourceManager();
+            const serverHandler = makeServerHandler(resourceManager);
+            const client = makeClient(serverHandler);
 
             const result = await client
                 .addRelationship<NoteDeclaration, 'tags'>('notes', '12', 'tags', [
@@ -584,7 +608,9 @@ describe('Client', () => {
 
     describe('method updateRelationship', () => {
         test('should return updated resource result', async () => {
-            const client = makeClient();
+            const resourceManager = makeResourceManager();
+            const serverHandler = makeServerHandler(resourceManager);
+            const client = makeClient(serverHandler);
 
             const result = await client
                 .updateRelationship<NoteDeclaration, 'tags'>('notes', '12', 'tags', [
@@ -645,7 +671,9 @@ describe('Client', () => {
 
     describe('method removeRelationship', () => {
         test('should return updated resource result', async () => {
-            const client = makeClient();
+            const resourceManager = makeResourceManager();
+            const serverHandler = makeServerHandler(resourceManager);
+            const client = makeClient(serverHandler);
 
             const result = await client
                 .removeRelationship<NoteDeclaration, 'tags'>('notes', '12', 'tags', [
@@ -722,7 +750,9 @@ describe('Client', () => {
 
     describe('method operations', () => {
         test('should return resource result', async () => {
-            const client = makeClient();
+            const resourceManager = makeResourceManager();
+            const serverHandler = makeServerHandler(resourceManager);
+            const client = makeClient(serverHandler);
 
             const result = await client
                 .operations([

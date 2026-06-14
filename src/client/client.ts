@@ -23,21 +23,9 @@ export class Client<C, P, M> {
 
     constructor(pageProvider: ClientPageProvider<P>, fetcher: Fetcher<C, P>) {
         this.#options = {
-            domain: '',
-            prefix: '',
             pageProvider: pageProvider,
             fetcher: fetcher,
         };
-    }
-
-    setPrefix(prefix: string): this {
-        this.#options.prefix = prefix;
-        return this;
-    }
-
-    setDomain(domain: string): this {
-        this.#options.domain = domain;
-        return this;
     }
 
     get<D extends ResourceDeclaration>(type: D['type'], id: string): GetQueryBuilder<D, C, P, M, []> {

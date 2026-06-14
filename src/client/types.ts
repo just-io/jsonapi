@@ -14,6 +14,4 @@ export interface ClientPageProvider<P> {
 export type Options<C, P> = {
     pageProvider: ClientPageProvider<P>;
     fetcher: Fetcher<C, P>;
-    domain: string;
-    prefix: string;
 };

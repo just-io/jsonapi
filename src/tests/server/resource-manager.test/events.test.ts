@@ -1,14 +1,19 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { Context, makeResourceManager, NoteDeclaration, TagDeclaration } from '../prepare';
-import { DataList, Operation, OperationResults, Query, ResourceIdentifier } from '../../types/common';
-import { DefaultPage } from '../../server/defaults';
-import { ResourceDeclaration, CommonResource, NewResource, EditableResource } from '../../types/resource-declaration';
-import { ErrorContext } from '../../server/resource-manager';
+import { Context, makeResourceManager, NoteDeclaration, TagDeclaration } from '../../prepare';
+import { DataList, Operation, OperationResults, Query, ResourceIdentifier } from '../../../types/common';
+import { DefaultPage } from '../../../server/defaults';
+import {
+    ResourceDeclaration,
+    CommonResource,
+    NewResource,
+    EditableResource,
+} from '../../../types/resource-declaration';
+import { ErrorContext } from '../../../server/resource-manager';
 import { ErrorSet } from '@just-io/schema';
-import { operation } from '../../server/operation';
-import { CommonError } from '../../types/formats';
+import { operation } from '../../../common/operation';
+import { CommonError } from '../../../types/formats';
 
 describe('ResourceManager', () => {
     describe('events', () => {
@@ -36,18 +41,16 @@ describe('ResourceManager', () => {
                     },
                 });
                 assert.ok(error instanceof ErrorSet);
-                assert.deepStrictEqual(error.toJSON(), {
-                    errors: [
-                        {
-                            detail: "The resource with type 'passwords' is not existed.",
-                            source: {
-                                parameter: 'query',
-                            },
-                            status: 404,
-                            title: 'Invalid Resource Type',
+                assert.deepStrictEqual(error.toJSON(), [
+                    {
+                        detail: 'The resource with type "passwords" is not existed.',
+                        source: {
+                            parameter: 'query',
                         },
-                    ],
-                });
+                        status: 404,
+                        title: 'Invalid Resource Type',
+                    },
+                ]);
             }
 
             resourceManager.on('error', handleError);
@@ -345,9 +348,10 @@ describe('ResourceManager', () => {
         function handleAdd(
             ctx: Context,
             query: Query<DefaultPage, ResourceDeclaration, ResourceDeclaration[], 'list'>,
-            newResource: NewResource<ResourceDeclaration>,
+            newResource: NewResource<ResourceDeclaration> | undefined,
             resource: CommonResource,
             included: CommonResource[],
+            origin: 'api' | 'outer',
         ): void {
             assert.deepStrictEqual(ctx, {
                 role: 'user',
@@ -391,6 +395,7 @@ describe('ResourceManager', () => {
                 },
             });
             assert.deepStrictEqual(included, []);
+            assert.deepStrictEqual(origin, 'api');
         }
 
         function handleChange(
@@ -467,9 +472,10 @@ describe('ResourceManager', () => {
         function handleUpdate(
             ctx: Context,
             query: Query<DefaultPage, ResourceDeclaration, ResourceDeclaration[], 'id'>,
-            editableResource: EditableResource<ResourceDeclaration>,
+            editableResource: EditableResource<ResourceDeclaration> | undefined,
             resource: CommonResource,
             included: CommonResource[],
+            origin: 'api' | 'outer',
         ): void {
             assert.deepStrictEqual(ctx, {
                 role: 'user',
@@ -527,6 +533,7 @@ describe('ResourceManager', () => {
                 },
             });
             assert.deepStrictEqual(included, []);
+            assert.deepStrictEqual(origin, 'api');
         }
 
         function handleChange(
@@ -1026,9 +1033,10 @@ describe('ResourceManager', () => {
         function handleAdd(
             ctx: Context,
             query: Query<DefaultPage, ResourceDeclaration, ResourceDeclaration[], 'list'>,
-            newResource: NewResource<ResourceDeclaration>,
+            newResource: NewResource<ResourceDeclaration> | undefined,
             resource: CommonResource,
             included: CommonResource[],
+            origin: 'api' | 'outer',
         ): void {
             assert.deepStrictEqual(ctx, {
                 role: 'user',
@@ -1110,6 +1118,7 @@ describe('ResourceManager', () => {
                 });
             }
             assert.deepStrictEqual(included, []);
+            assert.deepStrictEqual(origin, 'api');
         }
 
         let firstChangeCheck = true;
