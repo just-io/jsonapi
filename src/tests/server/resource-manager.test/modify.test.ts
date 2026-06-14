@@ -211,6 +211,39 @@ describe('ResourceManager', () => {
                 ]);
             });
 
+            test('should return error of add note with exists id', async () => {
+                const { result } = await resourceManager.add<NoteDeclaration>(
+                    context,
+                    {
+                        ref: { type: 'notes' },
+                    },
+                    {
+                        type: 'notes',
+                        attributes: {
+                            title: 'New Note',
+                        },
+                        relationships: {
+                            author: {
+                                type: 'users',
+                                id: '11',
+                            },
+                            tags: [],
+                        },
+                        id: '12',
+                    },
+                );
+                assert.ok(result.ok === false);
+                assert.deepStrictEqual(result.error.toJSON(), [
+                    {
+                        source: {
+                            parameter: 'query',
+                        },
+                        status: 409,
+                        title: 'Resource already exists',
+                    },
+                ]);
+            });
+
             test('should return error of add note to not found user', async () => {
                 const { result } = await resourceManager.add<NoteDeclaration>(
                     context,

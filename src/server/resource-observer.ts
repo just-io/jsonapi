@@ -202,7 +202,7 @@ export class ResourceObserver<C> {
         if (observationQuery.resources) {
             for (const type of Object.keys(observationQuery.resources)) {
                 for (const id of Object.keys(observationQuery.resources[type])) {
-                    this.#watchResource(context, type, id, observerId, observationQuery.resources[type][id]);
+                    await this.#watchResource(context, type, id, observerId, observationQuery.resources[type][id]);
                 }
             }
         }

@@ -107,6 +107,14 @@ export class ErrorFactory {
         };
     }
 
+    static makeExistsResourceIdError(errorFormatter: ErrorFormatter): CommonError {
+        return {
+            source: { parameter: 'query' },
+            title: errorFormatter.resource.existsTitle(),
+            status: 409,
+        };
+    }
+
     static makeInvalidResourceLidError(errorFormatter: ErrorFormatter, pointer: Pointer): CommonError {
         return {
             source: { pointer: pointer.toString() },

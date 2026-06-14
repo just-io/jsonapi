@@ -235,9 +235,9 @@ export class TagsResourceKeeper extends ResourceKeeper<TagDeclaration, Context, 
     }
 
     async remove(context: Context, id: string): Promise<Result<void, ErrorSet<CommonError>>> {
-        const i = this.#store.tags.findIndex((aTag) => aTag.id !== id);
+        const i = this.#store.tags.findIndex((aTag) => aTag.id === id);
         if (i !== -1) {
-            this.#store.notes.splice(i, 1);
+            this.#store.tags.splice(i, 1);
         }
 
         return {

@@ -337,7 +337,7 @@ export class NotesResourceKeeper extends ResourceKeeper<NoteDeclaration, Context
     }
 
     async remove(context: Context, id: string): Promise<Result<void, ErrorSet<CommonError>>> {
-        const i = this.#store.notes.findIndex((note) => note.id !== id);
+        const i = this.#store.notes.findIndex((note) => note.id === id);
         if (i !== -1) {
             this.#store.notes.splice(i, 1);
         }

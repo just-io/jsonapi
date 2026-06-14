@@ -23,6 +23,7 @@ export interface ErrorFormatter {
         invalidResourceFieldTitle: () => string;
         forbiddenTitle: () => string;
         notFoundTitle: () => string;
+        existsTitle: () => string;
         attributeIsReadonly: () => string;
         attributeShouldBeExisted: () => string;
         attributeIsUnchangeable: () => string;
@@ -70,6 +71,7 @@ export const defaultErrorFormatter: ErrorFormatter = {
         invalidResourceFieldTitle: () => 'Invalid Resource Field',
         forbiddenTitle: () => 'Forbidden',
         notFoundTitle: () => 'Not Found',
+        existsTitle: () => 'Resource already exists',
         attributeIsReadonly: () => 'Attribute is readonly.',
         attributeShouldBeExisted: () => 'Attribute should be existed.',
         attributeIsUnchangeable: () => 'Attribute is unchangeable.',

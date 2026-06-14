@@ -354,6 +354,13 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                     continue;
                 }
             }
+            if (errorSet.errors.length) {
+                return {
+                    ok: false,
+                    error: errorSet,
+                };
+            }
+
             const includedResources = await resourceKeeper.get(context, groups[key], {
                 // fields: query.params.fields[query.ref.type],
                 page: query.params?.page,
@@ -892,11 +899,10 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                 errorFormatter,
             ),
         );
-        // think about it
         if (newResource.id) {
             const status = await this.#checkResourceStatus(context, newResource.type, newResource.id, errorFormatter);
             if (status.type !== 'not-found') {
-                errorSet.add(ErrorFactory.makeNotFoundError(errorFormatter, location));
+                errorSet.add(ErrorFactory.makeExistsResourceIdError(errorFormatter));
             }
         }
         if (errorSet.errors.length) {
@@ -2048,7 +2054,7 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                             id: outerEvent.resourceIdentifier.id,
                         },
                     },
-                    outerEvent.resource,
+                    outerEvent.previousResource ?? null,
                     outerEvent.resource,
                     'outer',
                 );
