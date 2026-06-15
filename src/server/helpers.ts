@@ -81,7 +81,7 @@ export function connectToResourceManager<C, P>(
     };
     const handleUpdate = (
         context: C,
-        query: Query<P, ResourceDeclaration, ResourceDeclaration[], 'list'>,
+        query: Query<P, ResourceDeclaration, ResourceDeclaration[], 'id'>,
         editableResource: EditableResource<ResourceDeclaration> | undefined,
         resource: CommonResource,
         // eslint-disable-next-line @typescript-eslint/no-unused-vars

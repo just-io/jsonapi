@@ -362,7 +362,7 @@ export class ServerHandler<C, P, M> {
 
             if (relationship === null) {
                 return {
-                    status: 404,
+                    status: 200,
                     body: this.formatter.formatRelationship(
                         query as Query<P, ResourceDeclaration, [], 'relationship'>,
                         relationship,

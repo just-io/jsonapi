@@ -30,9 +30,9 @@ export class Observer<C> {
     #observationQueryMap: Map<ObservationQuery, (events: ObservationEvent[]) => void> = new Map();
 
     #callback = (events: ObservationEvent[]): void => {
-        for (const event of events) {
+        for (const [observationQuery, callback] of this.#observationQueryMap) {
             const filteredEvents: ObservationEvent[] = [];
-            for (const [observationQuery, callback] of this.#observationQueryMap) {
+            for (const event of events) {
                 switch (event.type) {
                     case 'add': {
                         if (observationQuery.types?.[event.resourceIdentifier.type]?.adding) {
@@ -47,7 +47,7 @@ export class Observer<C> {
                         }
                         if (
                             observationQuery.resources?.[event.resourceIdentifier.type]?.[event.resourceIdentifier.id]
-                                .relationships
+                                ?.relationships
                         ) {
                             filteredEvents.push(event);
                         }
@@ -56,7 +56,7 @@ export class Observer<C> {
                     case 'remove': {
                         if (
                             observationQuery.resources?.[event.resourceIdentifier.type]?.[event.resourceIdentifier.id]
-                                .relationships
+                                ?.relationships
                         ) {
                             filteredEvents.push(event);
                         }
@@ -65,7 +65,7 @@ export class Observer<C> {
                     case 'outer-update': {
                         if (
                             observationQuery.resources?.[event.resourceIdentifier.type]?.[event.resourceIdentifier.id]
-                                .outer
+                                ?.outer
                         ) {
                             filteredEvents.push(event);
                         }

@@ -595,18 +595,18 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
             };
         }
         const status = (await resourceKeeper.status(context, [query.ref.id], errorFormatter))[query.ref.id];
+        if (!status || status.type === 'not-found') {
+            return {
+                ok: false,
+                error: new ErrorSet<CommonError>().add(ErrorFactory.makeNotFoundError(errorFormatter, 'query')),
+            };
+        }
         if (status.type === 'forbidden') {
             return {
                 ok: false,
                 error: new ErrorSet<CommonError>().add(
                     ErrorFactory.makeForbiddenError(errorFormatter, 'query', status.reason),
                 ),
-            };
-        }
-        if (status.type === 'not-found') {
-            return {
-                ok: false,
-                error: new ErrorSet<CommonError>().add(ErrorFactory.makeNotFoundError(errorFormatter, 'query')),
             };
         }
 
