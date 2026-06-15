@@ -257,7 +257,15 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         if (resourceKeeper.schema.listable) {
             for (const key in filter) {
                 const filterSchema = resourceKeeper.schema.filter[key];
-                if (filterSchema.multiple) {
+                if (!filterSchema) {
+                    errorSet.add(
+                        ErrorFactory.makeInvalidQueryParameterError(
+                            errorFormatter,
+                            'filter',
+                            errorFormatter.query.invalidFilterField(key, resourceKeeper.schema.type),
+                        ),
+                    );
+                } else if (filterSchema.multiple) {
                     const result = filterSchema.transformer(filter[key], errorFormatter);
                     if (!result.ok) {
                         errorSet.append(result.error);
@@ -1292,6 +1300,7 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                 if (!newResourceResult.ok) {
                     return newResourceResult;
                 }
+
                 const relationshipResult = await this.#relationship(context, query, 'query', errorFormatter);
                 if (!relationshipResult.ok) {
                     return relationshipResult;
@@ -2079,7 +2088,7 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                             id: outerEvent.resourceIdentifier.id,
                         },
                     },
-                    null,
+                    outerEvent.oldResource ?? null,
                     null,
                     'outer',
                 );

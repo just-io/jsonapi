@@ -360,7 +360,7 @@ describe('ServerHandler', () => {
         assert.deepStrictEqual(
             { status, body },
             {
-                status: 200,
+                status: 201,
                 body: {
                     data: {
                         id,

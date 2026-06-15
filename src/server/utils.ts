@@ -5,17 +5,16 @@ export function filterResourceFields(resource: CommonResource, fields?: string[]
     if (!fields) {
         return resource;
     }
-    Object.keys(resource.attributes).forEach((key) => {
-        if (!fields.includes(key)) {
-            delete resource.attributes[key];
-        }
-    });
-    Object.keys(resource.relationships).forEach((key) => {
-        if (!fields.includes(key)) {
-            delete resource.relationships[key];
-        }
-    });
-    return resource;
+    return {
+        id: resource.id,
+        type: resource.type,
+        attributes: Object.fromEntries(
+            Object.entries(resource.attributes).filter((entry) => fields.includes(entry[0])),
+        ),
+        relationships: Object.fromEntries(
+            Object.entries(resource.relationships).filter((entry) => fields.includes(entry[0])),
+        ),
+    };
 }
 
 export function makeResourceKey(type: string, id: string): ResourceKey {

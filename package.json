@@ -1,6 +1,6 @@
 {
   "name": "@sio/jsonapi",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Simple implementation of JSONAPI server",
   "types": "dist/types",
   "main": "dist/cjs/index.js",

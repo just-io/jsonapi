@@ -412,27 +412,15 @@ export class ServerHandler<C, P, M> {
 
             const { resource, included } = result.value;
 
-            if (resource === null) {
-                return {
-                    status: 404,
-                    body: this.formatter.formatResource(
-                        query as Query<P, ResourceDeclaration, [], 'id'>,
-                        resource,
-                        included,
-                    ),
-                    eventStore,
-                };
-            } else {
-                return {
-                    status: 200,
-                    body: this.formatter.formatResource(
-                        query as Query<P, ResourceDeclaration, [], 'id'>,
-                        resource,
-                        included,
-                    ),
-                    eventStore,
-                };
-            }
+            return {
+                status: resource === null ? 404 : 200,
+                body: this.formatter.formatResource(
+                    query as Query<P, ResourceDeclaration, [], 'id'>,
+                    resource,
+                    included,
+                ),
+                eventStore,
+            };
         }
 
         const { result, eventStore } = await this.#resourceManager.list(context, query, errorFormatter);
@@ -547,7 +535,7 @@ export class ServerHandler<C, P, M> {
             const { resource, included } = result.value;
 
             return {
-                status: 200,
+                status: 201,
                 body: this.formatter.formatResource(
                     { ref: { ...query.ref, id: resource.id }, params: query.params },
                     resource,
@@ -771,11 +759,23 @@ export class ServerHandler<C, P, M> {
 
             const { relationship, included } = result.value;
 
+            if ('items' in relationship) {
+                return {
+                    status: 200,
+                    body: this.formatter.formatRelationships(
+                        query as Query<P, ResourceDeclaration, [], 'relationship'>,
+                        relationship,
+                        included,
+                    ),
+                    eventStore,
+                };
+            }
+
             return {
                 status: 200,
-                body: this.formatter.formatRelationships(
+                body: this.formatter.formatRelationship(
                     query as Query<P, ResourceDeclaration, [], 'relationship'>,
-                    relationship as DataList<ResourceIdentifier<string>>,
+                    relationship,
                     included,
                 ),
                 eventStore,
@@ -879,12 +879,22 @@ export class ServerHandler<C, P, M> {
                 eventStore,
             };
         } else {
-            const { eventStore } = await this.#resourceManager.remove(
+            const { result, eventStore } = await this.#resourceManager.remove(
                 context,
                 query as Query<P, ResourceDeclaration, [], 'id'>,
                 new Pointer('', 'data'),
                 errorFormatter,
             );
+
+            if (!result.ok) {
+                return {
+                    status: result.error.errors[0].status ?? 422,
+                    body: {
+                        errors: result.error.toJSON(),
+                    },
+                    eventStore,
+                };
+            }
 
             return {
                 status: 200,

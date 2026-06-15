@@ -35,13 +35,13 @@ export class Observer<C> {
             for (const [observationQuery, callback] of this.#observationQueryMap) {
                 switch (event.type) {
                     case 'add': {
-                        if (observationQuery.types?.[event.resourceIdentifier.type].adding) {
+                        if (observationQuery.types?.[event.resourceIdentifier.type]?.adding) {
                             filteredEvents.push(event);
                         }
                         break;
                     }
                     case 'update': {
-                        if (observationQuery.types?.[event.resourceIdentifier.type].updating) {
+                        if (observationQuery.types?.[event.resourceIdentifier.type]?.updating) {
                             filteredEvents.push(event);
                             break;
                         }
@@ -112,7 +112,7 @@ export class Observer<C> {
                 for (const type of Object.keys(observationQuery.resources)) {
                     for (const id of Object.keys(observationQuery.resources[type])) {
                         if (!commonObservationQuery.resources[type]) {
-                            commonObservationQuery.types[type] = {};
+                            commonObservationQuery.resources[type] = {};
                         }
                         if (!commonObservationQuery.resources[type][id]) {
                             commonObservationQuery.resources[type][id] = {};
