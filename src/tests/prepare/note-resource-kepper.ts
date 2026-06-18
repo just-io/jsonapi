@@ -258,7 +258,7 @@ export class NotesResourceKeeper extends ResourceKeeper<NoteDeclaration, Context
             notes = this.#store.notes.filter((aNote) => aNote.user_id === context.userId);
         }
         const limit = options.page?.size ?? 10;
-        const offset = options.page?.number ?? 0;
+        const offset = (options.page?.number ?? 0) * limit;
 
         return {
             ok: true,
@@ -323,11 +323,14 @@ export class NotesResourceKeeper extends ResourceKeeper<NoteDeclaration, Context
         resource: EditableResource<NoteDeclaration>,
     ): Promise<Result<void, ErrorSet<CommonError>>> {
         const note = this.#store.notes.find((aNote) => aNote.id === resource.id)!;
-        if (resource.attributes.text) {
+        if (resource.attributes.text !== undefined) {
             note.text = resource.attributes.text;
         }
-        if (resource.attributes.title) {
+        if (resource.attributes.title !== undefined) {
             note.title = resource.attributes.title;
+        }
+        if (resource.attributes.links) {
+            note.links = resource.attributes.links;
         }
 
         return {

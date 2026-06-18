@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import { ErrorSet, Result } from '@just-io/schema';
 import { DataList, ResourceIdentifier, ResourceKey } from '../types/common';
 import { CommonError } from '../types/formats';
@@ -238,8 +240,8 @@ export class ResourceObserver<C> {
     async handleEvent(event: IncomingEvent): Promise<void> {
         const id = crypto.randomUUID();
         const resourceKey = makeResourceKey(event.resourceIdentifier.type, event.resourceIdentifier.id);
-        const handledResourceKeysForEvents = new Set<ResourceKey>();
         const observerIdsForNotify = new Set<ObserverId>();
+        const handledResourceKeysEventsForObservers = new Map<ObserverId, Set<ResourceKey>>();
         if (event.type === 'add' || event.type === 'update') {
             const typeObserverIds = this.#eventObservers[eventMap[event.type]].get(event.resourceIdentifier.type);
             if (typeObserverIds) {
@@ -251,13 +253,16 @@ export class ResourceObserver<C> {
                             event.resourceIdentifier.type,
                             event.resourceIdentifier.id,
                         );
-                        if (isAvailable && !handledResourceKeysForEvents.has(resourceKey)) {
+                        const handledResourceKeysEvents =
+                            handledResourceKeysEventsForObservers.get(observerId) ?? new Set();
+                        handledResourceKeysEventsForObservers.set(observerId, handledResourceKeysEvents);
+                        if (isAvailable && !handledResourceKeysEvents.has(resourceKey)) {
                             observerInfo.observationEvents.push({
                                 id,
                                 type: event.type,
                                 resourceIdentifier: event.resourceIdentifier,
                             });
-                            handledResourceKeysForEvents.add(resourceKey);
+                            handledResourceKeysEvents.add(resourceKey);
                             observerIdsForNotify.add(observerId);
                         }
                     }
@@ -285,15 +290,17 @@ export class ResourceObserver<C> {
                     resource,
                     Object.keys(resource.relationships),
                 );
+                const handledResourceKeysEvents = handledResourceKeysEventsForObservers.get(observerId) ?? new Set();
+                handledResourceKeysEventsForObservers.set(observerId, handledResourceKeysEvents);
                 for (const relationshipResourceKey of relationshipResourceKeySet) {
                     if (this.#eventObservers.resource.get(relationshipResourceKey)?.get(observerId)?.outer) {
-                        if (!handledResourceKeysForEvents.has(resourceKey)) {
+                        if (!handledResourceKeysEvents.has(resourceKey)) {
                             observerInfo.observationEvents.push({
                                 id,
                                 type: 'outer-update',
                                 resourceIdentifier: event.resourceIdentifier,
                             });
-                            handledResourceKeysForEvents.add(resourceKey);
+                            handledResourceKeysEvents.add(resourceKey);
                             observerIdsForNotify.add(observerId);
                         }
                     }
@@ -305,13 +312,16 @@ export class ResourceObserver<C> {
             for (const [observerId, options] of resourceObserverIds) {
                 const observerInfo = this.#observerInfoes.get(observerId);
                 if (observerInfo) {
-                    if (!handledResourceKeysForEvents.has(resourceKey)) {
+                    const handledResourceKeysEvents =
+                        handledResourceKeysEventsForObservers.get(observerId) ?? new Set();
+                    handledResourceKeysEventsForObservers.set(observerId, handledResourceKeysEvents);
+                    if (!handledResourceKeysEvents.has(resourceKey)) {
                         observerInfo.observationEvents.push({
                             id,
                             type: event.type,
                             resourceIdentifier: event.resourceIdentifier,
                         });
-                        handledResourceKeysForEvents.add(resourceKey);
+                        handledResourceKeysEvents.add(resourceKey);
                         observerIdsForNotify.add(observerId);
                     }
                     this.#unwatchResource(event.resourceIdentifier.type, event.resourceIdentifier.id, observerId);
@@ -330,14 +340,17 @@ export class ResourceObserver<C> {
             for (const [observerId] of relationshipObserverIds) {
                 const observerInfo = this.#observerInfoes.get(observerId);
                 if (observerInfo) {
+                    const handledResourceKeysEvents =
+                        handledResourceKeysEventsForObservers.get(observerId) ?? new Set();
+                    handledResourceKeysEventsForObservers.set(observerId, handledResourceKeysEvents);
                     const resourceIdentifier = makeResourceIdentifierByResourceKey(resourceKey);
-                    if (!handledResourceKeysForEvents.has(resourceKey)) {
+                    if (!handledResourceKeysEvents.has(resourceKey)) {
                         observerInfo.observationEvents.push({
                             id,
                             type: event.type,
                             resourceIdentifier,
                         });
-                        handledResourceKeysForEvents.add(resourceKey);
+                        handledResourceKeysEvents.add(resourceKey);
                         observerIdsForNotify.add(observerId);
                     }
                 }

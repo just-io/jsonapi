@@ -72,8 +72,8 @@ export class Observer<C> {
                         break;
                     }
                 }
-                callback(filteredEvents);
             }
+            callback(filteredEvents);
         }
     };
 

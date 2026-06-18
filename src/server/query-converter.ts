@@ -222,7 +222,7 @@ export class QueryConverter<P> {
         if (query.params?.filter) {
             Object.keys(query.params.filter).forEach((key) => {
                 query.params!.filter![key]!.forEach((value) => {
-                    searchParams.set(`filter[${key}]`, value);
+                    searchParams.append(`filter[${key}]`, value);
                 });
             });
         }

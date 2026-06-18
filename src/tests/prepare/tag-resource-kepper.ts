@@ -174,7 +174,7 @@ export class TagsResourceKeeper extends ResourceKeeper<TagDeclaration, Context, 
                 });
         }
         const limit = options.page?.size ?? 10;
-        const offset = options.page?.number ?? 0;
+        const offset = (options.page?.number ?? 0) * limit;
 
         return {
             ok: true,

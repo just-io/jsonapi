@@ -535,14 +535,14 @@ describe('QueryConverter', () => {
                     fields: { articles: ['title', 'body'], people: ['name'] },
                     include: [['comments', 'author']],
                     sort: [{ field: 'id', asc: true }],
-                    filter: { 'title.contains': ['first'] },
+                    filter: { 'title.contains': ['first'], scope: ['first', 'second'] },
                     page: {},
                 },
             });
 
             assert.equal(
                 url,
-                '/articles/11/relationships/comments?include=comments.author&fields%5Barticles%5D=title%2Cbody&fields%5Bpeople%5D=name&filter%5Btitle.contains%5D=first&sort=id',
+                '/articles/11/relationships/comments?include=comments.author&fields%5Barticles%5D=title%2Cbody&fields%5Bpeople%5D=name&filter%5Btitle.contains%5D=first&filter%5Bscope%5D=first&filter%5Bscope%5D=second&sort=id',
             );
         });
     });
