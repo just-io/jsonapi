@@ -103,7 +103,6 @@ export type ErrorContext<P> =
           method: 'operations';
           operations: Operation<ResourceDeclaration>[];
           lidMap: Map<string, string>;
-          finished: number;
           finishedResults: OperationResults<Operation<ResourceDeclaration>[]>;
       };
 
@@ -332,33 +331,34 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                 if (relationship && 'items' in relationship) {
                     for (const identifier of relationship.items) {
                         if (!obj[identifier.type]) {
-                            obj[identifier.type] = [];
+                            obj[identifier.type] = new Set();
                         }
-                        obj[identifier.type].push(identifier.id);
+                        obj[identifier.type].add(identifier.id);
                     }
                 } else if (relationship) {
                     if (!obj[relationship.type]) {
-                        obj[relationship.type] = [];
+                        obj[relationship.type] = new Set();
                     }
-                    obj[relationship.type].push(relationship.id);
+                    obj[relationship.type].add(relationship.id);
                 }
 
                 return obj;
             },
-            {} as Record<string, string[]>,
+            {} as Record<string, Set<string>>,
         );
 
         const errorSet = new ErrorSet<CommonError>();
         for (const key of Object.keys(groups)) {
             const resourceKeeper = this.#resourceKeepers[key];
-            const statuses = await resourceKeeper.status(context, groups[key], errorFormatter);
+            const ids = Array.from(groups[key]);
+            const statuses = await resourceKeeper.status(context, ids, errorFormatter);
             for (const status of Object.values(statuses)) {
-                if (status.type === 'forbidden') {
-                    errorSet.add(ErrorFactory.makeForbiddenError(errorFormatter, 'include', status.reason));
-                    continue;
-                }
                 if (!status || status.type === 'not-found') {
                     errorSet.add(ErrorFactory.makeNotFoundError(errorFormatter, 'include', name));
+                    continue;
+                }
+                if (status.type === 'forbidden') {
+                    errorSet.add(ErrorFactory.makeForbiddenError(errorFormatter, 'include', status.reason));
                     continue;
                 }
             }
@@ -369,7 +369,7 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                 };
             }
 
-            const includedResources = await resourceKeeper.get(context, groups[key], {
+            const includedResources = await resourceKeeper.get(context, ids, {
                 // fields: query.params.fields[query.ref.type],
                 page: query.params?.page,
             });
@@ -1764,8 +1764,10 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                         eventStore.add('add', context, query, newResource, getResult.value.resource!, [], 'api');
                         eventStore.add('change', context, query, null, getResult.value.resource, 'api');
                     } else if (operation.op === 'update') {
+                        const id = 'lid' in operation.data ? lidMap.get(operation.data.lid)! : operation.data.id;
                         const editableResource: EditableResource<ResourceDeclaration> = {
                             type: operation.data.type,
+                            id,
                             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                             // @ts-expect-error
                             attributes: operation.data.attributes,
@@ -1780,7 +1782,7 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                         const query: Query<P, ResourceDeclaration, [], 'id'> = {
                             ref: {
                                 type: operation.data.type,
-                                id: 'lid' in operation.data ? lidMap.get(operation.data.lid)! : operation.data.id,
+                                id,
                             },
                         };
                         const getResultOld = await this.#get(context, query, pointer.concat(i), errorFormatter);
@@ -1999,7 +2001,6 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                 method: 'operations',
                 operations: operations as Operation<ResourceDeclaration>[],
                 lidMap,
-                finished: results.length,
                 finishedResults: results as OperationResults<Operation<ResourceDeclaration>[]>,
             },
         );

@@ -577,7 +577,7 @@ export class ServerHandler<C, P, M> {
                         ref: operation.ref,
                     };
                 }
-                if (operation.op === 'add' && 'data' in operation) {
+                if (operation.op === 'add' && 'ref' in operation) {
                     return {
                         op: 'add-relationships',
                         ref: operation.ref,
