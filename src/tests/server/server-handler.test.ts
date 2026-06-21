@@ -352,7 +352,7 @@ describe('ServerHandler', () => {
             },
         });
 
-        assert('data' in body);
+        assert(body && 'data' in body);
         assert(body.data !== null);
         assert('id' in body.data);
         const id = body.data.id;
@@ -450,20 +450,11 @@ describe('ServerHandler', () => {
         const serverHandler = makeServerHandler(resourceManager);
         const { status, body } = await serverHandler.handle(context, 'DELETE', 'www.example.com/api/v1/tags/23', '');
 
-        const id = '23';
-
         assert.deepStrictEqual(
             { status, body },
             {
-                status: 200,
-                body: {
-                    data: null,
-                    meta: {},
-                    included: [],
-                    links: {
-                        self: `www.example.com/api/v1/tags/${id}`,
-                    },
-                },
+                status: 204,
+                body: null,
             },
         );
     });

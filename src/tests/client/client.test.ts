@@ -484,14 +484,7 @@ describe('Client', () => {
 
             const result = await client.remove<NoteDeclaration>('notes', '12').exec(context);
 
-            assert.deepStrictEqual(result, {
-                data: null,
-                included: [],
-                links: {
-                    self: 'www.example.com/api/v1/notes/12',
-                },
-                meta: {},
-            });
+            assert.deepStrictEqual(result, null);
         });
     });
 

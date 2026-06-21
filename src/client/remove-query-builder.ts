@@ -1,4 +1,3 @@
-import { FetchNotExistResponseResourceData } from '../types/formats';
 import { ResourceDeclaration } from '../types/resource-declaration';
 import { Query } from '../types/common';
 import { Options } from './types';
@@ -20,7 +19,7 @@ export default class RemoveQueryBuilder<D extends ResourceDeclaration, C, P> {
         };
     }
 
-    exec(context: C): Promise<FetchNotExistResponseResourceData<D>> {
-        return this.#options.fetcher(context, 'remove', this.#query) as Promise<FetchNotExistResponseResourceData<D>>;
+    exec(context: C): Promise<null> {
+        return this.#options.fetcher(context, 'remove', this.#query) as Promise<null>;
     }
 }

@@ -58,7 +58,7 @@ describe('ResourceObserver', () => {
                 {
                     detail: 'The resource with type "books" is not existed.',
                     source: {
-                        pointer: '/types/books',
+                        pointer: '/resources/books',
                     },
                     status: 404,
                     title: 'Invalid Resource Type',

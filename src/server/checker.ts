@@ -163,17 +163,15 @@ export class Checker<C, P> {
                     errorSet.add(ErrorFactory.makeInvalidQueryParameterError(errorFormatter, 'include'));
                     break;
                 }
-                if (resourceKeepers.every((resourceKeeper) => !resourceKeeper.schema.relationships[item])) {
+                if (resourceKeepers.some((resourceKeeper) => !resourceKeeper.schema.relationships[item])) {
                     errorSet.add(ErrorFactory.makeInvalidQueryParameterError(errorFormatter, 'include'));
                     break;
                 }
-                resourceKeepers = resourceKeepers
-                    .map((resourceKeeper) =>
-                        resourceKeeper.schema.relationships[item].types.map(
-                            (relationshipsTypes) => this.#resourceKeepers[relationshipsTypes],
-                        ),
-                    )
-                    .flat();
+                resourceKeepers = resourceKeepers.flatMap((resourceKeeper) =>
+                    resourceKeeper.schema.relationships[item].types.map(
+                        (relationshipsTypes) => this.#resourceKeepers[relationshipsTypes],
+                    ),
+                );
             }
         }
 
@@ -606,7 +604,11 @@ export class Checker<C, P> {
                 const resourceKeeper = this.#resourceKeepers[type];
                 if (!resourceKeeper) {
                     errorSet.add(
-                        ErrorFactory.makeInvalidResourceTypeError(errorFormatter, type, pointer.concat('types', type)),
+                        ErrorFactory.makeInvalidResourceTypeError(
+                            errorFormatter,
+                            type,
+                            pointer.concat('resources', type),
+                        ),
                     );
                     continue;
                 }

@@ -21,13 +21,13 @@ import {
     ResourceDeclaration,
 } from '../types/resource-declaration';
 import { EventStore } from '@just-io/utils';
-import { CommonError, FetchResponse, FetchResponseError } from '../types/formats';
+import { CommonError, FetchResponse } from '../types/formats';
 import { defaultErrorFormatter, ErrorFormatter } from './error-formatter';
 import { MetaProvider, PageProvider } from './types';
 
 export type Response<C, P, M> = {
     status: number;
-    body: FetchResponse<M> | FetchResponseError;
+    body: FetchResponse<M>;
     eventStore: EventStore<EventMap<C, P>>;
 };
 
@@ -897,8 +897,8 @@ export class ServerHandler<C, P, M> {
             }
 
             return {
-                status: 200,
-                body: this.formatter.formatResource(query as Query<P, ResourceDeclaration, [], 'id'>, null, []),
+                status: 204,
+                body: null,
                 eventStore,
             };
         }

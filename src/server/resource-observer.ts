@@ -325,7 +325,7 @@ export class ResourceObserver<C> {
                         observerIdsForNotify.add(observerId);
                     }
                     this.#unwatchResource(event.resourceIdentifier.type, event.resourceIdentifier.id, observerId);
-                    this.#watchResource(
+                    await this.#watchResource(
                         observerInfo.context,
                         event.resourceIdentifier.type,
                         event.resourceIdentifier.id,

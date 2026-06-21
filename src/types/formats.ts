@@ -149,4 +149,5 @@ export type FetchResponse<M> =
     | FetchResponseResourcesData<M, ResourceDeclaration>
     | FetchResponseRelationshipData<M, ResourceDeclaration, keyof ResourceDeclaration['relationships']>
     | FetchResponseRelationshipsData<M, ResourceDeclaration, keyof ResourceDeclaration['relationships']>
-    | FetchResponseOperationsData<M>;
+    | FetchResponseOperationsData<M>
+    | null;
