@@ -46,6 +46,7 @@ export interface ErrorFormatter {
         invalidMultipleFilterField: (field: string, type: string) => string;
         invalidSearchParam: (key: string, value: string) => string;
         invalidId: () => string;
+        notFoundId: () => string;
     };
 }
 
@@ -82,7 +83,7 @@ export const defaultErrorFormatter: ErrorFormatter = {
         relationshipShouldNotBeArray: () => 'The relationship data should not be array.',
         relationshipShouldBeObject: () => 'The relationship data should be object.',
         invalidRelationshipType: (relationship: string, type: string) =>
-            `Relationship "${relationship}" has incorrected type "${type}".`,
+            `Relationship "${relationship}" has incorrect type "${type}".`,
     },
     query: {
         invalidTypeTitle: () => 'Type should be existed',
@@ -100,5 +101,6 @@ export const defaultErrorFormatter: ErrorFormatter = {
             `Filtering by field "filter[${field}]" does not support multiple values in type "${type}"`,
         invalidSearchParam: (key: string, value: string) => `Invalid search param "${key}=${value}"`,
         invalidId: () => 'Should not contain resource id',
+        notFoundId: () => 'Should contain id',
     },
 };

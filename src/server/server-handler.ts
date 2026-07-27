@@ -726,7 +726,7 @@ export class ServerHandler<C, P, M> {
         errorFormatter: ErrorFormatter,
     ): Promise<Response<C, P, M>> {
         if (!('id' in query.ref)) {
-            throw new ErrorSet().add(ErrorFactory.makeQueryError(errorFormatter.query.invalidId()));
+            throw new ErrorSet().add(ErrorFactory.makeQueryError(errorFormatter.query.notFoundId()));
         }
         if ('relationship' in query.ref) {
             const validateResult = relationshipBodySchema.validate(body, new Pointer(''), errorFormatter.schema, true);
@@ -833,7 +833,7 @@ export class ServerHandler<C, P, M> {
         errorFormatter: ErrorFormatter,
     ): Promise<Response<C, P, M>> {
         if (!('id' in query.ref)) {
-            throw new ErrorSet().add(ErrorFactory.makeQueryError(errorFormatter.query.invalidId()));
+            throw new ErrorSet().add(ErrorFactory.makeQueryError(errorFormatter.query.notFoundId()));
         }
         if ('relationship' in query.ref) {
             const validateResult = resourceIdentifiersBodySchema.validate(

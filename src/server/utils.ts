@@ -22,7 +22,16 @@ export function makeResourceKey(type: string, id: string): ResourceKey {
 }
 
 export function makeResourceIdentifierByResourceKey(resourceKey: ResourceKey): ResourceIdentifier<string> {
-    const [type, id] = resourceKey.split('/') as [string, string];
+    const slash = resourceKey.indexOf('/');
+    if (slash === -1) {
+        return {
+            type: '',
+            id: '',
+        };
+    }
+
+    const type = resourceKey.slice(0, slash);
+    const id = resourceKey.slice(slash + 1);
 
     return {
         type,

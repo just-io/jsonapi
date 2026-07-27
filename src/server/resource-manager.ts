@@ -350,6 +350,16 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         const errorSet = new ErrorSet<CommonError>();
         for (const key of Object.keys(groups)) {
             const resourceKeeper = this.#resourceKeepers[key];
+            if (!resourceKeeper) {
+                errorSet.add(
+                    ErrorFactory.makeInvalidQueryParameterError(
+                        errorFormatter,
+                        'include',
+                        errorFormatter.resource.invalidResourceType(type),
+                    ),
+                );
+                continue;
+            }
             const ids = Array.from(groups[key]);
             const statuses = await resourceKeeper.status(context, ids, errorFormatter);
             for (const status of Object.values(statuses)) {
@@ -820,43 +830,55 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         for (const [name, relationshipResource] of Object.entries(resource.relationships)) {
             if (Array.isArray(relationshipResource)) {
                 for (let i = 0; i < relationshipResource.length; i++) {
-                    const status = await this.#checkResourceStatus(
+                    const result = await this.#checkResourceStatus(
                         context,
                         relationshipResource[i].type,
                         relationshipResource[i].id,
                         errorFormatter,
                     );
-                    if (status.type === 'not-found') {
-                        errorSet.add(
-                            ErrorFactory.makeNotFoundError(
-                                errorFormatter,
-                                pointer.concat('relationships', name, i, 'id'),
-                            ),
-                        );
-                    } else if (status.type === 'forbidden') {
-                        errorSet.add(
-                            ErrorFactory.makeForbiddenError(
-                                errorFormatter,
-                                pointer.concat('relationships', name, i, 'id'),
-                            ),
-                        );
+
+                    if (!result.ok) {
+                        errorSet.append(result.error);
+                    } else {
+                        if (result.value.type === 'not-found') {
+                            errorSet.add(
+                                ErrorFactory.makeNotFoundError(
+                                    errorFormatter,
+                                    pointer.concat('relationships', name, i, 'id'),
+                                ),
+                            );
+                        } else if (result.value.type === 'forbidden') {
+                            errorSet.add(
+                                ErrorFactory.makeForbiddenError(
+                                    errorFormatter,
+                                    pointer.concat('relationships', name, i, 'id'),
+                                ),
+                            );
+                        }
                     }
                 }
             } else if (relationshipResource) {
-                const status = await this.#checkResourceStatus(
+                const result = await this.#checkResourceStatus(
                     context,
                     relationshipResource.type,
                     relationshipResource.id,
                     errorFormatter,
                 );
-                if (status.type === 'not-found') {
-                    errorSet.add(
-                        ErrorFactory.makeNotFoundError(errorFormatter, pointer.concat('relationships', name, 'id')),
-                    );
-                } else if (status.type === 'forbidden') {
-                    errorSet.add(
-                        ErrorFactory.makeForbiddenError(errorFormatter, pointer.concat('relationships', name, 'id')),
-                    );
+                if (!result.ok) {
+                    errorSet.append(result.error);
+                } else {
+                    if (result.value.type === 'not-found') {
+                        errorSet.add(
+                            ErrorFactory.makeNotFoundError(errorFormatter, pointer.concat('relationships', name, 'id')),
+                        );
+                    } else if (result.value.type === 'forbidden') {
+                        errorSet.add(
+                            ErrorFactory.makeForbiddenError(
+                                errorFormatter,
+                                pointer.concat('relationships', name, 'id'),
+                            ),
+                        );
+                    }
                 }
             }
         }
@@ -908,9 +930,13 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
             ),
         );
         if (newResource.id) {
-            const status = await this.#checkResourceStatus(context, newResource.type, newResource.id, errorFormatter);
-            if (status.type !== 'not-found') {
-                errorSet.add(ErrorFactory.makeExistsResourceIdError(errorFormatter));
+            const result = await this.#checkResourceStatus(context, newResource.type, newResource.id, errorFormatter);
+            if (!result.ok) {
+                errorSet.append(result.error);
+            } else {
+                if (result.value.type !== 'not-found') {
+                    errorSet.add(ErrorFactory.makeExistsResourceIdError(errorFormatter));
+                }
             }
         }
         if (errorSet.errors.length) {
@@ -1035,16 +1061,20 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                 errorFormatter,
             ),
         );
-        const status = await this.#checkResourceStatus(
+        const result = await this.#checkResourceStatus(
             context,
             editableResource.type,
             editableResource.id,
             errorFormatter,
         );
-        if (status.type === 'not-found') {
-            errorSet.add(ErrorFactory.makeNotFoundError(errorFormatter, location));
-        } else if (status.type === 'forbidden') {
-            errorSet.add(ErrorFactory.makeForbiddenError(errorFormatter, location));
+        if (!result.ok) {
+            errorSet.append(result.error);
+        } else {
+            if (result.value.type === 'not-found') {
+                errorSet.add(ErrorFactory.makeNotFoundError(errorFormatter, location));
+            } else if (result.value.type === 'forbidden') {
+                errorSet.add(ErrorFactory.makeForbiddenError(errorFormatter, location));
+            }
         }
         if (errorSet.errors.length) {
             return {
@@ -1145,11 +1175,15 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                 error: errorSet,
             };
         }
-        const status = await this.#checkResourceStatus(context, query.ref.type, query.ref.id, errorFormatter);
-        if (status.type === 'not-found') {
-            errorSet.add(ErrorFactory.makeNotFoundError(errorFormatter, location));
-        } else if (status.type === 'forbidden') {
-            errorSet.add(ErrorFactory.makeForbiddenError(errorFormatter, location));
+        const result = await this.#checkResourceStatus(context, query.ref.type, query.ref.id, errorFormatter);
+        if (!result.ok) {
+            errorSet.append(result.error);
+        } else {
+            if (result.value.type === 'not-found') {
+                errorSet.add(ErrorFactory.makeNotFoundError(errorFormatter, location));
+            } else if (result.value.type === 'forbidden') {
+                errorSet.add(ErrorFactory.makeForbiddenError(errorFormatter, location));
+            }
         }
         if (errorSet.errors.length) {
             return {
@@ -2099,22 +2133,29 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         return eventStore;
     }
 
-    #checkResourceStatus(
+    async #checkResourceStatus(
         context: C,
         type: string,
         id: string,
         errorFormatter: ErrorFormatter,
-    ): Promise<ResourceStatus> {
+    ): Promise<Result<ResourceStatus, ErrorSet<CommonError>>> {
         const resourceKeeper = this.#resourceKeepers[type];
         if (!resourceKeeper) {
-            return Promise.reject(
-                new ErrorSet<CommonError>().add(
+            return {
+                ok: false,
+                error: new ErrorSet<CommonError>().add(
                     ErrorFactory.makeInvalidResourceTypeError(errorFormatter, type, 'query'),
                 ),
-            );
+            };
         }
 
-        return resourceKeeper.status(context, [id], errorFormatter).then((result) => result[id]);
+        return resourceKeeper
+            .status(context, [id], errorFormatter)
+            .then((result) => result[id])
+            .then((status) => ({
+                ok: true,
+                value: status,
+            }));
     }
 
     async #checkResourceIdentifierStatus(
@@ -2128,13 +2169,17 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
             throw new Error('Should be initialized');
         }
         const errors: CommonError[] = [];
-        const status = await this.#checkResourceStatus(
+        const result = await this.#checkResourceStatus(
             context,
             resourceIdentifier.type,
             resourceIdentifier.id,
             errorFormatter,
         );
-        if (!ignoreNotFound && status.type === 'not-found') {
+        if (!result.ok) {
+            errors.push(...result.error.errors);
+            return errors;
+        }
+        if (!ignoreNotFound && result.value.type === 'not-found') {
             errors.push(
                 ErrorFactory.makeNotFoundError(
                     errorFormatter,
@@ -2143,7 +2188,7 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                 ),
             );
         }
-        if (status.type === 'forbidden') {
+        if (result.value.type === 'forbidden') {
             errors.push(
                 ErrorFactory.makeForbiddenError(
                     errorFormatter,

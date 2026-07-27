@@ -130,6 +130,9 @@ export class Checker<C, P> {
             );
         }
         const errorSet = this.#checkRef(method, query.ref, checkMethod, errorFormatter);
+        if (errorSet.errors.length) {
+            return errorSet;
+        }
         if (query.params?.fields) {
             errorSet.append(
                 this.#checkPresenceOfFields(query.params.fields as Record<string, string[]>, errorFormatter),
