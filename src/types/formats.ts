@@ -2,7 +2,6 @@ import { ResourceDeclaration } from './resource-declaration';
 import { ResourceIdentifier } from './common';
 
 export type FormatResourceOptions = {
-    excludeEmptyRelationships?: boolean;
     excludeLinks?: boolean;
     fields?: string[];
 };

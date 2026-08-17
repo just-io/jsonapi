@@ -216,9 +216,15 @@ export class ResourceObserver<C> {
                 for (const type of Object.keys(observationQuery.types)) {
                     if (observationQuery.types[type].adding) {
                         this.#eventObservers.addingResourceTypes.get(type)?.delete(observerId);
+                        if (this.#eventObservers.addingResourceTypes.get(type)?.size === 0) {
+                            this.#eventObservers.addingResourceTypes.delete(type);
+                        }
                     }
                     if (observationQuery.types[type].updating) {
                         this.#eventObservers.updatingResourceTypes.get(type)?.delete(observerId);
+                        if (this.#eventObservers.updatingResourceTypes.get(type)?.size === 0) {
+                            this.#eventObservers.updatingResourceTypes.delete(type);
+                        }
                     }
                 }
             }

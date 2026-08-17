@@ -319,7 +319,7 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                     ErrorFactory.makeInvalidQueryParameterError(
                         errorFormatter,
                         'include',
-                        `The resource type '${type}' does not have field '${name}'.`,
+                        errorFormatter.resource.invalidResourceField(type, name),
                     ),
                 ),
             };
@@ -355,7 +355,7 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
                     ErrorFactory.makeInvalidQueryParameterError(
                         errorFormatter,
                         'include',
-                        errorFormatter.resource.invalidResourceType(type),
+                        errorFormatter.resource.invalidResourceType(key),
                     ),
                 );
                 continue;
@@ -2040,7 +2040,6 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         );
     }
 
-    // test it
     collectEvents(context: C, outerEvents: OuterEvent[]): EventStore<EventMap<C, P>> {
         if (!this.#initialized) {
             throw new Error('Should be initialized');
@@ -2165,9 +2164,6 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         ignoreNotFound: boolean,
         errorFormatter: ErrorFormatter,
     ): Promise<CommonError[]> {
-        if (!this.#initialized) {
-            throw new Error('Should be initialized');
-        }
         const errors: CommonError[] = [];
         const result = await this.#checkResourceStatus(
             context,
@@ -2207,9 +2203,6 @@ export class ResourceManager<C, P> implements Eventable<EventMap<C, P>> {
         ignoreNotFound: boolean,
         errorFormatter: ErrorFormatter,
     ): Promise<CommonError[]> {
-        if (!this.#initialized) {
-            throw new Error('Should be initialized');
-        }
         const errors: CommonError[] = [];
         for (let i = 0; i < resourceIdentifiers.length; i++) {
             const existingErrors = await this.#checkResourceIdentifierStatus(

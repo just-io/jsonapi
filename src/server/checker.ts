@@ -499,7 +499,7 @@ export class Checker<C, P> {
         const errorSet = new ErrorSet<CommonError>();
         const resourceKeeper = this.#resourceKeepers[type];
         if (!resourceKeeper.schema.listable) {
-            throw new Error('Invalid');
+            return new ErrorSet<CommonError>().add(ErrorFactory.makeMethodNotAllowedError(errorFormatter, 'get'));
         }
         if (!resourceKeeper.schema.sort[sortField.field]) {
             return errorSet.add(
@@ -550,7 +550,7 @@ export class Checker<C, P> {
         const errorSet = new ErrorSet<CommonError>();
         const resourceKeeper = this.#resourceKeepers[type];
         if (!resourceKeeper.schema.listable) {
-            throw new Error('Invalid');
+            return new ErrorSet<CommonError>().add(ErrorFactory.makeMethodNotAllowedError(errorFormatter, 'get'));
         }
         if (!resourceKeeper.schema.filter[field]) {
             return errorSet.add(

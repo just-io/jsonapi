@@ -97,20 +97,12 @@ export class Formatter<P, M> {
         query: Query<P, D, I, 'list' | 'id' | 'relationship'>,
         included: CommonResource[],
     ): ResourcePresenter<M, I[number]>[] {
-        return included
-            .filter(
-                (includedResource, i, arr) =>
-                    i ===
-                    arr.findIndex(
-                        (aResource) => aResource.id === includedResource.id && aResource.type === includedResource.type,
-                    ),
-            )
-            .map((includedResource) =>
-                this.#makeResourceData(includedResource, {
-                    fields: query.params?.fields?.[includedResource.type],
-                    // excludeEmptyRelationships: true,
-                }),
-            );
+        return included.map((includedResource) =>
+            this.#makeResourceData(includedResource, {
+                fields: query.params?.fields?.[includedResource.type],
+                // excludeEmptyRelationships: true,
+            }),
+        );
     }
 
     formatRelationship<
@@ -208,11 +200,7 @@ export class Formatter<P, M> {
             type: filteredResource.type,
             id: filteredResource.id,
             attributes: filteredResource.attributes as ResourcePresenter<M, D>['attributes'],
-            // TODO: check it
-            relationships:
-                keys.length === 0 && options.excludeEmptyRelationships
-                    ? undefined
-                    : (relationships as ResourcePresenter<M, D>['relationships']),
+            relationships: relationships as ResourcePresenter<M, D>['relationships'],
             meta: this.#metaProvider.compose(resource),
         };
 
