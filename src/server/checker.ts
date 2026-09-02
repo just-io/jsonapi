@@ -552,7 +552,7 @@ export class Checker<C, P> {
         if (!resourceKeeper.schema.listable) {
             return new ErrorSet<CommonError>().add(ErrorFactory.makeMethodNotAllowedError(errorFormatter, 'get'));
         }
-        if (!resourceKeeper.schema.filter[field]) {
+        if (!resourceKeeper.schema.filter[field] || values.length === 0) {
             return errorSet.add(
                 ErrorFactory.makeInvalidQueryParameterError(
                     errorFormatter,

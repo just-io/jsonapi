@@ -1,6 +1,6 @@
 import { NewResource, PartialResourceDeclaration, ResourceDeclaration } from '../types/resource-declaration';
 import { Query } from '../types/common';
-import { FetchExistResponseResourceData } from '../types/formats';
+import { FetchExistResponseResourceData, FetchResponseError } from '../types/formats';
 import { Options } from './types';
 
 export default class AddQueryBuilder<D extends ResourceDeclaration, C, P, M, I extends ResourceDeclaration[]> {
@@ -72,9 +72,9 @@ export default class AddQueryBuilder<D extends ResourceDeclaration, C, P, M, I e
         return this;
     }
 
-    exec(context: C): Promise<FetchExistResponseResourceData<M, D, I>> {
+    exec(context: C): Promise<FetchExistResponseResourceData<M, D, I> | FetchResponseError> {
         return this.#options.fetcher(context, 'add', this.#query, { data: this.#newResource }) as Promise<
-            FetchExistResponseResourceData<M, D, I>
+            FetchExistResponseResourceData<M, D, I> | FetchResponseError
         >;
     }
 }

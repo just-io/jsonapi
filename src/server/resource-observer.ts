@@ -59,7 +59,10 @@ export class ResourceObserver<C> {
                     for (const resourceIdentifier of relationshipDataList.items) {
                         relationshipResourceKeySet.add(makeResourceKey(resourceIdentifier.type, resourceIdentifier.id));
                     }
-                    if (relationshipDataList.items.length < relationshipDataList.limit) {
+                    if (
+                        relationshipDataList.items.length < relationshipDataList.limit ||
+                        offset + relationshipDataList.items.length >= relationshipDataList.total
+                    ) {
                         break;
                     }
                     offset = offset + relationshipDataList.limit;

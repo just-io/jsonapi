@@ -1,4 +1,4 @@
-import { FetchResponseRelationshipsData } from '../types/formats';
+import { FetchResponseError, FetchResponseRelationshipsData } from '../types/formats';
 import {
     MultipleRelationshipKeys,
     NewRelationshipValue,
@@ -83,9 +83,9 @@ export default class RemoveRelationshipQueryBuilder<
         return this;
     }
 
-    exec(context: C): Promise<FetchResponseRelationshipsData<M, D, R, I>> {
+    exec(context: C): Promise<FetchResponseRelationshipsData<M, D, R, I> | FetchResponseError> {
         return this.#options.fetcher(context, 'remove', this.#query, { data: this.#value }) as Promise<
-            FetchResponseRelationshipsData<M, D, R, I>
+            FetchResponseRelationshipsData<M, D, R, I> | FetchResponseError
         >;
     }
 }

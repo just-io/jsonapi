@@ -1,6 +1,7 @@
 import {
     FetchExistResponseResourceData,
     FetchNotExistResponseResourceData,
+    FetchResponseError,
     FetchResponseRelationshipData,
     FetchResponseRelationshipsData,
 } from '../types/formats';
@@ -56,7 +57,7 @@ export default class OperationsQueryBuilder<C, P, M, const OA extends Operation<
         this.#options = options;
     }
 
-    exec(context: C): Promise<FetchResponseOperationsData<M, OA>> {
+    exec(context: C): Promise<FetchResponseOperationsData<M, OA> | FetchResponseError> {
         return this.#options.fetcher(
             context,
             'operations',
@@ -67,6 +68,6 @@ export default class OperationsQueryBuilder<C, P, M, const OA extends Operation<
                     op: operationMap[operation.op],
                 })),
             },
-        ) as Promise<FetchResponseOperationsData<M, OA>>;
+        ) as Promise<FetchResponseOperationsData<M, OA> | FetchResponseError>;
     }
 }

@@ -85,7 +85,7 @@ export const pageProvider: PageProvider<DefaultPage> = {
             entries.push(['number', String(page.number)]);
         }
 
-        if (page.size) {
+        if (page.size !== undefined) {
             entries.push(['size', String(page.size)]);
         }
 
@@ -103,7 +103,7 @@ export const pageProvider: PageProvider<DefaultPage> = {
         limit: number,
     ): { first: DefaultPage; last: DefaultPage; prev?: DefaultPage; next?: DefaultPage } {
         const number = page.number ?? 0;
-        const currentNumber = number < Math.ceil(total / limit) ? number : 0;
+        const currentNumber = number < Math.ceil(total / limit) && total !== 0 ? number : 0;
         return {
             first: {
                 number: 0,

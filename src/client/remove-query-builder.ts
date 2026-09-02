@@ -1,6 +1,7 @@
 import { ResourceDeclaration } from '../types/resource-declaration';
 import { Query } from '../types/common';
 import { Options } from './types';
+import { FetchResponseError } from '../types/formats';
 
 export default class RemoveQueryBuilder<D extends ResourceDeclaration, C, P> {
     #options: Options<C, P>;
@@ -19,7 +20,7 @@ export default class RemoveQueryBuilder<D extends ResourceDeclaration, C, P> {
         };
     }
 
-    exec(context: C): Promise<null> {
-        return this.#options.fetcher(context, 'remove', this.#query) as Promise<null>;
+    exec(context: C): Promise<null | FetchResponseError> {
+        return this.#options.fetcher(context, 'remove', this.#query) as Promise<null | FetchResponseError>;
     }
 }

@@ -235,12 +235,16 @@ describe('ServerHandler', () => {
             {
                 status: 404,
                 body: {
-                    data: null,
-                    included: [],
-                    links: {
-                        self: 'www.example.com/api/v1/users/10',
-                    },
-                    meta: {},
+                    errors: [
+                        {
+                            detail: undefined,
+                            source: {
+                                parameter: 'query',
+                            },
+                            status: 404,
+                            title: 'Not Found',
+                        },
+                    ],
                 },
             },
         );

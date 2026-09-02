@@ -135,12 +135,16 @@ describe('Client', () => {
                 .exec(context);
 
             assert.deepStrictEqual(result, {
-                data: null,
-                included: [],
-                links: {
-                    self: 'www.example.com/api/v1/notes/10?include=tags&fields%5Bnotes%5D=title%2Ctags&fields%5Btags%5D=name',
-                },
-                meta: {},
+                errors: [
+                    {
+                        detail: undefined,
+                        source: {
+                            parameter: 'query',
+                        },
+                        status: 404,
+                        title: 'Not Found',
+                    },
+                ],
             });
         });
     });
@@ -321,6 +325,8 @@ describe('Client', () => {
                     },
                 })
                 .exec(context);
+
+            assert('data' in result);
 
             const noteId = result.data.id;
 
@@ -774,6 +780,8 @@ describe('Client', () => {
                     ),
                 ])
                 .exec(context);
+
+            assert('atomic:results' in result);
 
             const noteId = result['atomic:results'][0].data.id;
 

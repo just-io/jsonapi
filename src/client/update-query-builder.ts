@@ -1,4 +1,4 @@
-import { FetchExistResponseResourceData } from '../types/formats';
+import { FetchExistResponseResourceData, FetchResponseError } from '../types/formats';
 import { EditableResource, PartialResourceDeclaration, ResourceDeclaration } from '../types/resource-declaration';
 import { Query } from '../types/common';
 import { Options } from './types';
@@ -73,9 +73,9 @@ export default class UpdateQueryBuilder<D extends ResourceDeclaration, C, P, M, 
         return this;
     }
 
-    exec(context: C): Promise<FetchExistResponseResourceData<M, D, I>> {
+    exec(context: C): Promise<FetchExistResponseResourceData<M, D, I> | FetchResponseError> {
         return this.#options.fetcher(context, 'update', this.#query, { data: this.#editableResource }) as Promise<
-            FetchExistResponseResourceData<M, D, I>
+            FetchExistResponseResourceData<M, D, I> | FetchResponseError
         >;
     }
 }

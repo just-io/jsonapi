@@ -1,4 +1,4 @@
-import { FetchResponseResourcesData } from '../types/formats';
+import { FetchResponseError, FetchResponseResourcesData } from '../types/formats';
 import { PartialResourceDeclaration, ResourceDeclaration } from '../types/resource-declaration';
 import { Query } from '../types/common';
 import { Options } from './types';
@@ -99,7 +99,9 @@ export default class ListQueryBuilder<D extends ResourceDeclaration, C, P, M, I 
         return this;
     }
 
-    exec(context: C): Promise<FetchResponseResourcesData<M, D, I>> {
-        return this.#options.fetcher(context, 'get', this.#query) as Promise<FetchResponseResourcesData<M, D, I>>;
+    exec(context: C): Promise<FetchResponseResourcesData<M, D, I> | FetchResponseError> {
+        return this.#options.fetcher(context, 'get', this.#query) as Promise<
+            FetchResponseResourcesData<M, D, I> | FetchResponseError
+        >;
     }
 }

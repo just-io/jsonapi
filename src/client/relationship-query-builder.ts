@@ -1,4 +1,4 @@
-import { FetchResponseRelationshipData, FetchResponseRelationshipsData } from '../types/formats';
+import { FetchResponseError, FetchResponseRelationshipData, FetchResponseRelationshipsData } from '../types/formats';
 import { PartialResourceDeclaration, ResourceDeclaration } from '../types/resource-declaration';
 import { Query } from '../types/common';
 import { Options } from './types';
@@ -70,13 +70,13 @@ export default class RelationshipQueryBuilder<
         context: C,
     ): Promise<
         D['relationships'][R]['multiple'] extends true
-            ? FetchResponseRelationshipsData<M, D, R, I>
-            : FetchResponseRelationshipData<M, D, R, I>
+            ? FetchResponseRelationshipsData<M, D, R, I> | FetchResponseError
+            : FetchResponseRelationshipData<M, D, R, I> | FetchResponseError
     > {
         return this.#options.fetcher(context, 'get', this.#query) as Promise<
             D['relationships'][R]['multiple'] extends true
-                ? FetchResponseRelationshipsData<M, D, R, I>
-                : FetchResponseRelationshipData<M, D, R, I>
+                ? FetchResponseRelationshipsData<M, D, R, I> | FetchResponseError
+                : FetchResponseRelationshipData<M, D, R, I> | FetchResponseError
         >;
     }
 }

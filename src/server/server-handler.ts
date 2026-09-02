@@ -414,11 +414,18 @@ export class ServerHandler<C, P, M> {
 
             return {
                 status: resource === null ? 404 : 200,
-                body: this.formatter.formatResource(
-                    query as Query<P, ResourceDeclaration, [], 'id'>,
-                    resource,
-                    included,
-                ),
+                body:
+                    resource === null
+                        ? {
+                              errors: new ErrorSet<CommonError>()
+                                  .add(ErrorFactory.makeNotFoundError(errorFormatter, 'query'))
+                                  .toJSON(),
+                          }
+                        : this.formatter.formatResource(
+                              query as Query<P, ResourceDeclaration, [], 'id'>,
+                              resource,
+                              included,
+                          ),
                 eventStore,
             };
         }
